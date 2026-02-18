@@ -20,6 +20,7 @@ def health_check():
 class ResearchRequest(BaseModel):
     prompt: str
 
+
 @router.post("/research")
 async def research(request: ResearchRequest):
     answer = await run_research(request.prompt)
