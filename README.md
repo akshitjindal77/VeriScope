@@ -102,7 +102,7 @@ VeriScope enforces citation-grounded generation.
 
 1. **Clone repository**
    ```bash
-   git clone https://github.com/your-username/VeriScope.git
+   git clone https://github.com/akshitjindal77/VeriScope.git
    cd VeriScope
    ```
 2. **Create virtual environment**
