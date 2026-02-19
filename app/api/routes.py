@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from app.config.settings import settings
 from pydantic import BaseModel
 from app.services.research_services import run_research
+from app.models.research_models import ResearchResponse
 
 router = APIRouter()
 
@@ -21,11 +22,15 @@ class ResearchRequest(BaseModel):
     prompt: str
 
 
-@router.post("/research")
+@router.post("/research", response_model = ResearchResponse)
 async def research(request: ResearchRequest):
-    answer = await run_research(request.prompt)
+    result = await run_research(request.prompt)
     return {
-        "received": request.prompt,
-        "answer": answer
+        "status": "success",
+        "prompt": request.prompt,
+        "answer": result["answer"],
+        "citations": result["citations"],
+        "confidence": result["confidence"]
     }
+
 
