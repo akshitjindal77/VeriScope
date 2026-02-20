@@ -41,11 +41,61 @@ class ResearchAgent:
                     seen_urls.add(source.url)
                     all_sources.append(source)
 
-        return all_sources        
+        return all_sources    
+
+    def analyze_step(self, sources):
+        notes = []
+        seen = set()
+
+        for s in sources:
+            text = (s.snippet or "").strip()
+            if not text:
+                continue
+
+            note = text
+
+            if note not in seen:
+                seen.add(note)
+                notes.append(note)
+        
+        return notes
+    
+    def write_step(self, prompt:str, notes):
+        if not notes:
+            return (
+                f"I couldn’t find enough usable information to answer: '{prompt}'. "
+                "Try rephrasing your question or being more specific."
+            )
+        
+        intro = f"Based on the collected research, here is a structured explanation of '{prompt}': "
+        body = " ".join(notes)
+        conclusion = " The information above is synthesized from the referenced sources."
+
+        return intro + body + conclusion
+    
+
+    def confidence_step(self, sources, notes):
+        if not notes:
+            return 0.2
+        
+        unique_sources = len(sources)
+
+        conf = 0.3 + (0.15*unique_sources)
+
+        if conf > 0.95:
+            conf = 0.95
+        if conf < 0.1:
+            conf = 0.1
+        
+        return round(conf, 2)
+
 
     async def run(self, prompt:str) -> dict:
         plan = await self.plan_step(prompt)
         sources = await self.search_step(plan)
+        notes = self.analyze_step(sources)
+        answer = self.write_step(prompt, notes)
+        confidence = self.confidence_step(sources, notes)
 
         citations = []
         for source in sources:
@@ -57,11 +107,10 @@ class ResearchAgent:
                 )
             )
 
-        answer = f"Research results collected for '{prompt}'."
-
         return {
+            "status": "success",
             "answer": answer,
-            "citations": [source.url for source in sources],
+            "prompt": prompt,
             "citations": citations,
-            "confidence": 0.7
+            "confidence": confidence
         }
