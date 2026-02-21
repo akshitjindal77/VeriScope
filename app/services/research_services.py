@@ -1,13 +1,17 @@
 from app.agents.research_agent import ResearchAgent
+from app.providers.web_search_provider import WebSearchProvider
+from app.config.settings import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
-async def run_research(prompt: str) -> str:
+provider = WebSearchProvider(settings)
+agent = ResearchAgent(search_provider=provider)
+
+async def run_research(prompt: str) -> dict:
     logger.info("run_research started")
     logger.info("Prompt Length: %s", len(prompt))
 
-    agent = ResearchAgent()
     result = await agent.run(prompt)
     
     logger.info("Agent returned %s citations", len(result.get("citations", [])))

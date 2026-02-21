@@ -1,7 +1,11 @@
+import logging
+
 from app.providers.search_provider import SearchProvider
 from app.providers.mock_search_provider import MockSearchProvider
 from app.models.research_models import ResearchPlan, ResearchState, Source, Citation
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 class ResearchAgent:
     def __init__(self, search_provider: SearchProvider = None):
@@ -57,6 +61,8 @@ class ResearchAgent:
             if note not in seen:
                 seen.add(note)
                 notes.append(note)
+        empty = sum(1 for s in sources if not (s.snippet or "").strip())
+        logger.info("empty_snippets=%s out_of=%s", empty, len(sources))
         
         return notes
     
