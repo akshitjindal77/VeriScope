@@ -12,6 +12,9 @@ class Source(BaseModel):
 
 class Citation(BaseModel):
     source_id: str
+    url: str
+    title: str
+    quotes: str = ""
     evidence: str
     confidence: Optional[float] = None
 
@@ -35,3 +38,8 @@ class ResearchResponse(BaseModel):
     prompt: str
     citations: List[Citation]
     confidence: float
+
+class ResearchResult(BaseModel):
+    answer: str
+    citations: List[Citation] = []
+    confidence: Optional[float] = None

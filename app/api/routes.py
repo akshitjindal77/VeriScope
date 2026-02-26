@@ -31,7 +31,7 @@ async def research(request: ResearchRequest):
         raise HTTPException(status_code=400, detail="Prompt cannot be empty or just spaces")
     
     if len(request.prompt) > MAX_PROMPT_LENGTH:
-        raise HTTPException(status_code=413, detail="Prompt cannot be too long, The maximum allowed is {MAX_PROMPT_LENGTH} characters")
+        raise HTTPException(status_code=413, detail=f"Prompt cannot be too long, The maximum allowed is {MAX_PROMPT_LENGTH} characters")
     
     result = await run_research(request.prompt)
     

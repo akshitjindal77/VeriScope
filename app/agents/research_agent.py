@@ -107,9 +107,12 @@ class ResearchAgent:
         for source in sources:
             citations.append(
                 Citation(
-                    source_id = source.id,
-                    evidence= source.snippet,
-                    confidence= None
+                    source_id=source.id,
+                    url=source.url,
+                    title=source.title,
+                    quotes=source.snippet[:200],
+                    evidence=source.snippet,   
+                    confidence=0.5
                 )
             )
 
