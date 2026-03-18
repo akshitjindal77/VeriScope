@@ -1,6 +1,8 @@
 from app.agents.research_agent import ResearchAgent
 from app.providers.web_search_provider import WebSearchProvider
 from app.providers.brave_search_provider import BraveSearchProvider
+from app.providers.ollama_provider import OllamaProvider
+from app.providers.mock_llm_provider import MockLLMProvider
 from app.config.settings import settings
 import logging
 
@@ -11,8 +13,14 @@ def _build_provider():
         return BraveSearchProvider(settings)
     return WebSearchProvider(settings)
 
+def _build_llm_provider():
+    if settings.LLM_PROVIDER.lower() == "ollama":
+        return OllamaProvider(settings)
+    return MockLLMProvider()
+
 provider = _build_provider()
-agent = ResearchAgent(search_provider=provider)
+llm_provider = _build_llm_provider()
+agent = ResearchAgent(search_provider=provider, llm_provider=llm_provider)
 
 
 async def run_research(prompt: str) -> dict:
