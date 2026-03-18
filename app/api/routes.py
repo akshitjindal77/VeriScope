@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from app.config.settings import settings
 from pydantic import BaseModel
-from app.services.research_services import run_research
+from app.services.research_services import run_research, llm_provider
 from app.models.research_models import ResearchResponse
 from fastapi import HTTPException
 
@@ -13,11 +13,15 @@ def hello():
     return ("hello bitch")
 
 @router.get("/health")
-def health_check():
-    return{
+async def health_check():
+    llm_ok = await llm_provider.is_available()
+    return {
         "status": "ok",
         "app_name": settings.app_name,
-        "env": settings.env
+        "env": settings.env,
+        "llm_provider": settings.LLM_PROVIDER,
+        "llm_model": settings.OLLAMA_MODEL,
+        "llm_status": "connected" if llm_ok else "unavailable",
     }
 
 class ResearchRequest(BaseModel):
