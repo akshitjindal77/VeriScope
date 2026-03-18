@@ -3,13 +3,16 @@ from app.providers.search_provider import SearchProvider
 from app.models.research_models import Source
 
 from typing import List
-import logging, hashlib, httpx
+import logging, hashlib, httpx, re, html
 from cachetools import TTLCache
 
 logger = logging.getLogger(__name__)
 
 def make_source_id(url: str) -> str:
     return hashlib.sha1(url.encode("utf-8")).hexdigest()[:10]
+
+def clean_snippet(text: str) -> str:
+    return html.unescape(re.sub(r"<[^>]+>", "", text))
 
 class BraveSearchProvider(SearchProvider):
     def __init__(self, settings):
@@ -72,7 +75,7 @@ class BraveSearchProvider(SearchProvider):
                     id= make_source_id(url),
                     title=title,
                     url=url,
-                    snippet=snippet,
+                    snippet=clean_snippet(snippet),
                     published_at=None,
                 )
             )
