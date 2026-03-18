@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import List, Optional
-import hashlib, re
+import hashlib, html, re
 from urllib.parse import urlparse, parse_qs, urlunparse
 import httpx
 from bs4 import BeautifulSoup
@@ -76,6 +76,10 @@ def _make_source_id(url: str) -> str:
     return hashlib.sha1(url.encode("utf-8")).hexdigest()[:10]
 
 
+def _clean_snippet(text: str) -> str:
+    return html.unescape(re.sub(r"<[^>]+>", "", text))
+
+
 class WebSearchProvider(SearchProvider):
     def __init__(self, settings):
         self.settings = settings
@@ -136,7 +140,7 @@ class WebSearchProvider(SearchProvider):
                     id=_make_source_id(canon),
                     title=s.title.strip() if s.title else host,
                     url=canon,
-                    snippet=(s.snippet or "").strip(),
+                    snippet=_clean_snippet((s.snippet or "").strip()),
                     published_at=getattr(s, "published_at", None),
                 )
             )
@@ -161,7 +165,7 @@ class WebSearchProvider(SearchProvider):
             title = a.get_text(" ", strip=True)
             href = a["href"].strip()
             snippet = snippet_el.get_text(" ", strip=True) if snippet_el else ""
-            snippet = re.sub(r"\s+", " ", snippet).strip()
+            snippet = _clean_snippet(re.sub(r"\s+", " ", snippet).strip())
 
             results.append(
                 Source(
