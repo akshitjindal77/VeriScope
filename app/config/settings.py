@@ -18,6 +18,14 @@ class Settings(BaseSettings):
     WEB_SEARCH_BLOCK_DOMAINS: List[str] = []
     WEB_SEARCH_ALLOW_DOMAINS: Optional[List[str]] = None
 
+    # ── LLM Provider Settings ──
+    LLM_PROVIDER: str = "ollama"
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "mistral"
+    LLM_TEMPERATURE: float = 0.3
+    LLM_MAX_TOKENS: int = 2048
+    LLM_TIMEOUT_S: float = 120.0
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore"
