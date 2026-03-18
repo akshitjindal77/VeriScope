@@ -43,3 +43,12 @@ class ResearchResult(BaseModel):
     answer: str
     citations: List[Citation] = []
     confidence: Optional[float] = None
+
+# ── LLM Provider Models ──────────────────────────────────────────────
+
+class LLMResponse(BaseModel):
+    """Standardized response shape returned by every LLM provider."""
+
+    text: str
+    model: str
+    tokens_used: Optional[int] = None
