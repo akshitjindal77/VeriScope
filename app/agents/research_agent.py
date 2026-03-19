@@ -5,9 +5,10 @@ from app.providers.search_provider import SearchProvider
 from app.providers.mock_search_provider import MockSearchProvider
 from app.providers.llm_provider import LLMProvider
 from app.providers.mock_llm_provider import MockLLMProvider
-from app.models.research_models import ResearchPlan, ResearchState, Source, Citation
+from app.models.research_models import ResearchPlan, ResearchState, Source, Citation, QueryAnalysis
 from app.prompts.synthesis import SYNTHESIS_SYSTEM_PROMPT, build_synthesis_prompt
 from app.prompts.query_analysis import QUERY_ANALYSIS_SYSTEM_PROMPT, QUERY_ANALYSIS_USER_TEMPLATE
+from app.prompts.disambiguation import DISAMBIGUATION_SYSTEM_PROMPT, DISAMBIGUATION_USER_TEMPLATE, format_candidate_meanings
 from app.utils.json_parser import parse_llm_json
 from typing import List
 
@@ -24,6 +25,40 @@ class ResearchAgent:
 
 
     
+    async def disambiguate_step(self, prompt: str, analysis: QueryAnalysis) -> QueryAnalysis:
+        if not analysis.is_ambiguous or not analysis.candidate_meanings:
+            return analysis
+
+        formatted = format_candidate_meanings(analysis.candidate_meanings)
+        user_prompt = DISAMBIGUATION_USER_TEMPLATE.format(
+            query=prompt,
+            candidate_meanings=formatted,
+            domain=analysis.domain,
+        )
+        response = await self.llm_provider.generate(
+            prompt=user_prompt,
+            system=DISAMBIGUATION_SYSTEM_PROMPT,
+            temperature=0.1,
+        )
+        parsed = parse_llm_json(response.text)
+
+        resolved = parsed.get("resolved_meaning", "")
+        if resolved and isinstance(resolved, str) and resolved.strip():
+            analysis.resolved_meaning = resolved
+            logger.info(
+                "Disambiguated '%s' to: %s (reason: %s)",
+                prompt,
+                resolved,
+                parsed.get("reasoning", "none"),
+            )
+            new_queries = parsed.get("search_queries")
+            if new_queries and isinstance(new_queries, list) and len(new_queries) > 0:
+                analysis.search_queries = new_queries
+        else:
+            logger.warning("Disambiguation failed for '%s', using original queries", prompt)
+
+        return analysis
+
     async def plan_step(self, prompt: str) -> ResearchPlan:
         user_prompt = QUERY_ANALYSIS_USER_TEMPLATE.format(query=prompt)
         response = await self.llm_provider.generate(
@@ -32,6 +67,14 @@ class ResearchAgent:
             temperature=0.2,
         )
         parsed = parse_llm_json(response.text)
+
+        # Coerce is_ambiguous to a proper boolean
+        # Mistral sometimes returns "true"/"false" as strings instead of JSON booleans
+        raw_ambiguous = parsed.get("is_ambiguous", False)
+        if isinstance(raw_ambiguous, str):
+            is_ambiguous = raw_ambiguous.strip().lower() == "true"
+        else:
+            is_ambiguous = bool(raw_ambiguous)
 
         raw_queries = parsed.get("search_queries")
         if raw_queries and isinstance(raw_queries, list) and all(isinstance(q, str) for q in raw_queries):
@@ -53,14 +96,42 @@ class ResearchAgent:
                 f"What are examples of {prompt}?",
             ]
 
-        logger.info(
-            "Query analysis: type=%s, domain=%s, ambiguous=%s",
-            parsed.get("query_type", "unknown"),
-            parsed.get("domain", "unknown"),
-            parsed.get("is_ambiguous", "unknown"),
+        # Ensure candidate_meanings is a list of strings
+        raw_candidates = parsed.get("candidate_meanings", [])
+        if isinstance(raw_candidates, list):
+            candidate_meanings = [str(c) for c in raw_candidates if c]
+        else:
+            candidate_meanings = []
+
+        if is_ambiguous and not candidate_meanings:
+            # LLM flagged ambiguity but didn't provide meanings — generate generic ones
+            term = prompt.strip().rstrip("?").split()[-1]  # rough extraction of the key term
+            candidate_meanings = [
+                f"{term} (technical/scientific meaning)",
+                f"{term} (common/everyday meaning)",
+            ]
+            logger.info("Generated fallback candidate meanings for '%s': %s", prompt, candidate_meanings)
+
+        analysis = QueryAnalysis(
+            query_type=parsed.get("query_type", "general"),
+            domain=parsed.get("domain", "general"),
+            is_ambiguous=is_ambiguous,
+            candidate_meanings=candidate_meanings,
+            search_queries=search_queries,
+            sub_questions=sub_questions,
         )
 
-        return ResearchPlan(sub_questions=sub_questions, search_queries=search_queries)
+        analysis = await self.disambiguate_step(prompt, analysis)
+
+        logger.info(
+            "Query analysis: type=%s, domain=%s, ambiguous=%s, resolved=%s",
+            analysis.query_type,
+            analysis.domain,
+            analysis.is_ambiguous,
+            analysis.resolved_meaning,
+        )
+
+        return (ResearchPlan(sub_questions=analysis.sub_questions, search_queries=analysis.search_queries), analysis)
     
     async def search_step(self, plan: ResearchPlan) -> List[Source]:
         all_sources: List[Source] = []
@@ -136,7 +207,7 @@ class ResearchAgent:
         return {int(n) for n in re.findall(r"\[(\d+)\]", answer)}
 
     async def run(self, prompt:str) -> dict:
-        plan = await self.plan_step(prompt)
+        plan, analysis = await self.plan_step(prompt)
         all_sources = await self.search_step(plan)
         notes = self.analyze_step(all_sources)
         sources = all_sources[:10]
@@ -164,5 +235,7 @@ class ResearchAgent:
             "answer": answer,
             "prompt": prompt,
             "citations": citations,
-            "confidence": confidence
+            "confidence": confidence,
+            "query_type": analysis.query_type,
+            "resolved_meaning": analysis.resolved_meaning,
         }
