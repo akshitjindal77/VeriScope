@@ -10,6 +10,11 @@ class Source(BaseModel):
     snippet: str
     published_at: Optional[datetime] = None
 
+class ScoredSource(Source):
+    domain_authority: float = 0.0
+    relevance_score: float = 0.0
+    quality_score: float = 0.0
+
 class Citation(BaseModel):
     source_id: str
     url: str
