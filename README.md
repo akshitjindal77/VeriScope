@@ -237,27 +237,27 @@ The current implementation is a working pipeline with known areas for improvemen
 The following features are planned, in implementation order:
 
 ### Phase 1: Query Intelligence
-- [ ] Query Analysis module with intent classification, domain detection, and ambiguity flagging
-- [ ] Ambiguity Resolver for multi-meaning terms (RAG, Python, Java, Apple, etc.)
-- [ ] Dynamic query expansion based on detected intent and domain
+- [x] Query Analysis module with intent classification, domain detection, and ambiguity flagging
+- [x] Ambiguity Resolver for multi-meaning terms (RAG, Python, Java, Apple, etc.)
+- [x] Dynamic query expansion based on detected intent and domain
 
 ### Phase 2: LLM Integration
-- [ ] Abstract LLMProvider interface mirroring the SearchProvider pattern
-- [ ] Ollama provider for local inference (Mistral 7B or similar)
-- [ ] Prompt template system for synthesis and query analysis
-- [ ] JSON parsing utility for structured LLM output
+- [x] Abstract LLMProvider interface mirroring the SearchProvider pattern
+- [x] Ollama provider for local inference (Mistral 7B or similar)
+- [x] Prompt template system for synthesis and query analysis
+- [x] JSON parsing utility for structured LLM output
 - [ ] Graceful fallback to rule-based logic when LLM is unavailable
 
 ### Phase 3: Source Quality
-- [ ] Domain authority scoring (tiered ranking of source domains)
-- [ ] Relevance scoring per source against the resolved query
-- [ ] Low-quality source filtering before synthesis
+- [x] Domain authority scoring (tiered ranking of source domains)
+- [x] Relevance scoring per source against the resolved query
+- [x] Low-quality source filtering before synthesis
 
 ### Phase 4: Intelligent Synthesis
-- [ ] LLM-powered narrative synthesis replacing concatenation
-- [ ] Claim extraction and cross-source agreement detection
-- [ ] Inline citation mapping (claims linked to specific sources)
-- [ ] Calibrated confidence scoring based on evidence quality and agreement
+- [x] LLM-powered narrative synthesis replacing concatenation
+- [x] Claim extraction and cross-source agreement detection
+- [x] Inline citation mapping (claims linked to specific sources)
+- [x] Calibrated confidence scoring based on evidence quality and agreement
 
 ### Phase 5: Deduplication and Clustering
 - [ ] Embedding-based semantic similarity for source grouping
