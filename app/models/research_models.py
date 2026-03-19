@@ -38,6 +38,8 @@ class ResearchResponse(BaseModel):
     prompt: str
     citations: List[Citation]
     confidence: float
+    query_type: Optional[str] = None
+    resolved_meaning: Optional[str] = None
 
 class ResearchResult(BaseModel):
     answer: str
@@ -52,3 +54,15 @@ class LLMResponse(BaseModel):
     text: str
     model: str
     tokens_used: Optional[int] = None
+
+
+class QueryAnalysis(BaseModel):
+    """Structured output from LLM query analysis. Captures intent, domain, ambiguity detection, and resolved search strategy."""
+
+    query_type: str = "general"
+    domain: str = "general"
+    is_ambiguous: bool = False
+    candidate_meanings: List[str] = Field(default_factory=list)
+    resolved_meaning: Optional[str] = None
+    search_queries: List[str] = Field(default_factory=list)
+    sub_questions: List[str] = Field(default_factory=list)
