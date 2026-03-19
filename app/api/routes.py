@@ -44,7 +44,9 @@ async def research(request: ResearchRequest):
         "prompt": request.prompt,
         "answer": result["answer"],
         "citations": result["citations"],
-        "confidence": result["confidence"]
+        "confidence": result["confidence"],
+        "query_type": result.get("query_type"),
+        "resolved_meaning": result.get("resolved_meaning"),
     }
 
 
