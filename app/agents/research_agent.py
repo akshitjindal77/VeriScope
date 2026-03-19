@@ -5,7 +5,8 @@ from app.providers.search_provider import SearchProvider
 from app.providers.mock_search_provider import MockSearchProvider
 from app.providers.llm_provider import LLMProvider
 from app.providers.mock_llm_provider import MockLLMProvider
-from app.models.research_models import ResearchPlan, ResearchState, Source, Citation, QueryAnalysis
+from app.models.research_models import ResearchPlan, ResearchState, Source, Citation, QueryAnalysis, ScoredSource
+from app.utils.source_scoring import compute_source_quality, get_domain_authority_score, compute_relevance_score
 from app.prompts.synthesis import SYNTHESIS_SYSTEM_PROMPT, build_synthesis_prompt
 from app.prompts.query_analysis import QUERY_ANALYSIS_SYSTEM_PROMPT, QUERY_ANALYSIS_USER_TEMPLATE
 from app.prompts.disambiguation import DISAMBIGUATION_SYSTEM_PROMPT, DISAMBIGUATION_USER_TEMPLATE, format_candidate_meanings
@@ -23,8 +24,6 @@ class ResearchAgent:
         self.search_provider = search_provider
         self.llm_provider = llm_provider
 
-
-    
     async def disambiguate_step(self, prompt: str, analysis: QueryAnalysis) -> QueryAnalysis:
         if not analysis.is_ambiguous or not analysis.candidate_meanings:
             return analysis
@@ -187,21 +186,93 @@ class ResearchAgent:
         return response.text
     
 
-    def confidence_step(self, sources, notes):
+    def confidence_step(self, sources, notes, is_ambiguous: bool = False, was_disambiguated: bool = False) -> float:
+        """Calculate overall confidence based on source quality, diversity, and coverage."""
         if not notes:
-            return 0.2
-        
-        unique_sources = len(sources)
+            return 0.1
 
-        conf = 0.3 + (0.15*unique_sources)
+        quality_scores = [getattr(s, 'quality_score', 0.4) for s in sources]
+        avg_quality = sum(quality_scores) / len(quality_scores) if quality_scores else 0.0
 
-        if conf > 0.95:
-            conf = 0.95
-        if conf < 0.1:
-            conf = 0.1
-        
-        return round(conf, 2)
+        count = len(sources)
+        if count >= 8:
+            count_factor = 0.85
+        elif count >= 5:
+            count_factor = 0.5 + (count - 5) * 0.05 + 0.2
+        elif count >= 3:
+            count_factor = 0.3 + (count - 3) * 0.1
+        elif count >= 1:
+            count_factor = 0.2 + (count - 1) * 0.05
+        else:
+            count_factor = 0.0
 
+        domains = set()
+        for s in sources:
+            try:
+                from urllib.parse import urlparse
+                host = urlparse(s.url).hostname or ""
+                parts = host.split(".")
+                if len(parts) >= 2:
+                    domains.add(".".join(parts[-2:]))
+            except Exception:
+                pass
+        diversity = min(len(domains) / 5.0, 1.0)
+
+        ambiguity_penalty = 0.0
+        if is_ambiguous and not was_disambiguated:
+            ambiguity_penalty = 0.15
+        elif is_ambiguous and was_disambiguated:
+            ambiguity_penalty = 0.05
+
+        raw_confidence = (
+            (0.35 * avg_quality) +
+            (0.30 * count_factor) +
+            (0.20 * diversity) +
+            (0.15 * 1.0)
+        ) - ambiguity_penalty
+
+        confidence = max(0.1, min(0.95, raw_confidence))
+
+        logger.info(
+            "Confidence: avg_quality=%.2f, count_factor=%.2f, diversity=%.2f, ambiguity_penalty=%.2f, final=%.2f",
+            avg_quality, count_factor, diversity, ambiguity_penalty, confidence,
+        )
+
+        return round(confidence, 2)
+
+
+    def score_sources_step(self, prompt: str, sources: List[Source]) -> List[ScoredSource]:
+        """Score each source by domain authority and relevance, then sort by quality descending."""
+        scored: List[ScoredSource] = []
+
+        for source in sources:
+            authority = get_domain_authority_score(source.url)
+            relevance = compute_relevance_score(prompt, source.snippet)
+            quality = round((0.6 * authority) + (0.4 * relevance), 2)
+
+            scored.append(ScoredSource(
+                id=source.id,
+                title=source.title,
+                url=source.url,
+                snippet=source.snippet,
+                published_at=source.published_at,
+                domain_authority=authority,
+                relevance_score=relevance,
+                quality_score=quality,
+            ))
+
+        scored.sort(key=lambda s: s.quality_score, reverse=True)
+
+        logger.info(
+            "Source scoring: %s sources scored, top=%s (%.2f), bottom=%s (%.2f)",
+            len(scored),
+            scored[0].url if scored else "none",
+            scored[0].quality_score if scored else 0,
+            scored[-1].url if scored else "none",
+            scored[-1].quality_score if scored else 0,
+        )
+
+        return scored
 
     def _extract_cited_source_numbers(self, answer: str) -> set:
         return {int(n) for n in re.findall(r"\[(\d+)\]", answer)}
@@ -209,11 +280,35 @@ class ResearchAgent:
     async def run(self, prompt:str) -> dict:
         plan, analysis = await self.plan_step(prompt)
         all_sources = await self.search_step(plan)
-        notes = self.analyze_step(all_sources)
-        sources = all_sources[:10]
-        logger.info("Total sources collected: %s, sending top %s to synthesis", len(all_sources), min(len(all_sources), 10))
+        scored_sources = self.score_sources_step(prompt, all_sources)
+
+        min_quality = 0.3
+        filtered = [s for s in scored_sources if s.quality_score >= min_quality]
+        if len(filtered) < 5 and len(scored_sources) >= 5:
+            filtered = scored_sources[:5]
+        logger.info("Source filtering: %s -> %s sources (min_quality=%.2f)", len(scored_sources), len(filtered), min_quality)
+
+        notes = self.analyze_step(filtered)
+        sources = filtered[:10]
+        logger.info("Total sources collected: %s, sending top %s to synthesis", len(all_sources), len(sources))
+
+        for i, s in enumerate(sources[:5]):
+            logger.info(
+                "  Source #%s: quality=%.2f authority=%.2f relevance=%.2f | %s",
+                i + 1,
+                getattr(s, 'quality_score', 0),
+                getattr(s, 'domain_authority', 0),
+                getattr(s, 'relevance_score', 0),
+                s.url[:80],
+            )
+
         answer = await self.write_step(prompt, notes, sources)
-        confidence = self.confidence_step(all_sources, notes)
+        confidence = self.confidence_step(
+            sources,
+            notes,
+            is_ambiguous=analysis.is_ambiguous if analysis else False,
+            was_disambiguated=analysis.resolved_meaning is not None if analysis else False,
+        )
 
         cited_numbers = self._extract_cited_source_numbers(answer)
         citations = []
@@ -226,7 +321,7 @@ class ResearchAgent:
                         title=source.title,
                         quotes=source.snippet[:200],
                         evidence=source.snippet,
-                        confidence=0.5
+                        confidence=getattr(source, 'quality_score', 0.5)
                     )
                 )
 
