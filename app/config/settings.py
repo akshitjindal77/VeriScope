@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     LLM_MAX_TOKENS: int = 2048
     LLM_TIMEOUT_S: float = 120.0
     SOURCE_MIN_QUALITY: float = 0.3
+    REACT_MAX_STEPS: int = 7
+    REACT_STEP_TIMEOUT_S: float = 60.0
 
     model_config = SettingsConfigDict(
         env_file=".env",
