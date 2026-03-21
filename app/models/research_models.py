@@ -45,6 +45,7 @@ class ResearchResponse(BaseModel):
     confidence: float
     query_type: Optional[str] = None
     resolved_meaning: Optional[str] = None
+    react_steps: Optional[int] = None
 
 class ResearchResult(BaseModel):
     answer: str
