@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     REACT_MAX_STEPS: int = 7
     REACT_STEP_TIMEOUT_S: float = 60.0
 
+    # ── Database Settings ──
+    DATABASE_URL: str = "sqlite+aiosqlite:///./veriscope.db"
+
+    # ── Auth Settings ──
+    JWT_SECRET_KEY: str = "change-this-to-a-random-secret-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_MINUTES: int = 1440
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore"
