@@ -26,6 +26,7 @@ async def health_check():
 
 class ResearchRequest(BaseModel):
     prompt: str
+    mode: str = "linear"
 
 
 @router.post("/research", response_model = ResearchResponse)
@@ -37,7 +38,7 @@ async def research(request: ResearchRequest):
     if len(request.prompt) > MAX_PROMPT_LENGTH:
         raise HTTPException(status_code=413, detail=f"Prompt cannot be too long, The maximum allowed is {MAX_PROMPT_LENGTH} characters")
     
-    result = await run_research(request.prompt)
+    result = await run_research(request.prompt, mode=request.mode)
     
     return {
         "status": "success",
@@ -47,6 +48,7 @@ async def research(request: ResearchRequest):
         "confidence": result["confidence"],
         "query_type": result.get("query_type"),
         "resolved_meaning": result.get("resolved_meaning"),
+        "react_steps": result.get("react_steps"),
     }
 
 
