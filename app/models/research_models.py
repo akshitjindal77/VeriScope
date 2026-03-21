@@ -46,6 +46,7 @@ class ResearchResponse(BaseModel):
     query_type: Optional[str] = None
     resolved_meaning: Optional[str] = None
     react_steps: Optional[int] = None
+    session_id: Optional[str] = None
 
 class ResearchResult(BaseModel):
     answer: str
