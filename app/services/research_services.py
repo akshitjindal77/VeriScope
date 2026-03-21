@@ -1,4 +1,5 @@
 from app.agents.research_agent import ResearchAgent
+from app.agents.react_agent import ReactResearchAgent
 from app.providers.web_search_provider import WebSearchProvider
 from app.providers.brave_search_provider import BraveSearchProvider
 from app.providers.ollama_provider import OllamaProvider
@@ -21,14 +22,20 @@ def _build_llm_provider():
 provider = _build_provider()
 llm_provider = _build_llm_provider()
 agent = ResearchAgent(search_provider=provider, llm_provider=llm_provider)
+react_agent = ReactResearchAgent(search_provider=provider, llm_provider=llm_provider, settings=settings)
 
 
-async def run_research(prompt: str) -> dict:
+async def run_research(prompt: str, mode: str = "linear") -> dict:
     logger.info("run_research started")
     logger.info("Prompt Length: %s", len(prompt))
 
-    result = await agent.run(prompt)
-    
+    if mode == "react":
+        logger.info("Using ReAct agent mode")
+        result = await react_agent.run(prompt)
+    else:
+        logger.info("Using linear agent mode")
+        result = await agent.run(prompt)
+
     logger.info("Agent returned %s citations", len(result.get("citations", [])))
-    
+
     return result
