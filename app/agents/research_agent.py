@@ -11,7 +11,9 @@ from app.prompts.synthesis import SYNTHESIS_SYSTEM_PROMPT, build_synthesis_promp
 from app.prompts.query_analysis import QUERY_ANALYSIS_SYSTEM_PROMPT, QUERY_ANALYSIS_USER_TEMPLATE
 from app.prompts.disambiguation import DISAMBIGUATION_SYSTEM_PROMPT, DISAMBIGUATION_USER_TEMPLATE, format_candidate_meanings
 from app.utils.json_parser import parse_llm_json
-from typing import List
+from typing import List, Optional, Callable, Awaitable
+
+StatusCallback = Optional[Callable[[str, str], Awaitable[None]]]
 
 logger = logging.getLogger(__name__)
 
@@ -274,12 +276,24 @@ class ResearchAgent:
 
         return scored
 
+    async def _emit(self, callback: StatusCallback, stage: str, message: str):
+        """Send a status update if a callback is provided."""
+        if callback:
+            await callback(stage, message)
+
     def _extract_cited_source_numbers(self, answer: str) -> set:
         return {int(n) for n in re.findall(r"\[(\d+)\]", answer)}
 
-    async def run(self, prompt:str) -> dict:
+    async def run(self, prompt: str, status_callback: StatusCallback = None) -> dict:
+        await self._emit(status_callback, "analyzing", "Analyzing your query...")
         plan, analysis = await self.plan_step(prompt)
+        await self._emit(status_callback, "planning", f"Generated {len(plan.search_queries)} search queries")
+
+        await self._emit(status_callback, "searching", f"Searching {len(plan.search_queries)} queries...")
         all_sources = await self.search_step(plan)
+        await self._emit(status_callback, "searching", f"Found {len(all_sources)} sources")
+
+        await self._emit(status_callback, "scoring", f"Scoring {len(all_sources)} sources by quality...")
         scored_sources = self.score_sources_step(prompt, all_sources)
 
         min_quality = 0.3
@@ -290,6 +304,7 @@ class ResearchAgent:
 
         notes = self.analyze_step(filtered)
         sources = filtered[:10]
+        await self._emit(status_callback, "scoring", f"Selected top {len(sources)} sources for synthesis")
         logger.info("Total sources collected: %s, sending top %s to synthesis", len(all_sources), len(sources))
 
         for i, s in enumerate(sources[:5]):
@@ -302,7 +317,9 @@ class ResearchAgent:
                 s.url[:80],
             )
 
+        await self._emit(status_callback, "synthesizing", "Writing answer from sources...")
         answer = await self.write_step(prompt, notes, sources)
+        await self._emit(status_callback, "synthesizing", "Answer complete, building citations...")
         confidence = self.confidence_step(
             sources,
             notes,
@@ -324,6 +341,7 @@ class ResearchAgent:
                         confidence=getattr(source, 'quality_score', 0.5)
                     )
                 )
+        await self._emit(status_callback, "done", "Research complete")
 
         return {
             "status": "success",
