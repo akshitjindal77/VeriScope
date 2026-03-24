@@ -85,21 +85,23 @@ async def save_to_cache(prompt: str, mode: str, response: dict, db: AsyncSession
     logger.info("Cached result for prompt='%s' mode=%s (TTL=%s min)", prompt[:50], mode, ttl_minutes)
 
 
-async def run_research(prompt: str, mode: str = "linear", db: AsyncSession = None) -> dict:
+async def run_research(prompt: str, mode: str = "linear", db: AsyncSession = None, status_callback=None) -> dict:
     logger.info("run_research started")
     logger.info("Prompt Length: %s", len(prompt))
 
     if db:
         cached = await get_cached_result(prompt, mode, db)
         if cached:
+            if status_callback:
+                await status_callback("done", "Loaded from cache")
             return cached
 
     if mode == "react":
         logger.info("Using ReAct agent mode")
-        result = await react_agent.run(prompt)
+        result = await react_agent.run(prompt, status_callback=status_callback)
     else:
         logger.info("Using linear agent mode")
-        result = await agent.run(prompt)
+        result = await agent.run(prompt, status_callback=status_callback)
 
     logger.info("Agent returned %s citations", len(result.get("citations", [])))
 
