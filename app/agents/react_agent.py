@@ -1,6 +1,8 @@
 import logging
 import re
-from typing import List, Dict, Optional, Set
+from typing import List, Dict, Optional, Set, Callable, Awaitable
+
+StatusCallback = Optional[Callable[[str, str], Awaitable[None]]]
 
 from app.providers.search_provider import SearchProvider
 from app.providers.llm_provider import LLMProvider
@@ -22,7 +24,11 @@ class ReactResearchAgent:
         self.llm_provider = llm_provider
         self.max_steps = settings.REACT_MAX_STEPS if settings else 7
 
-    async def run(self, prompt: str) -> dict:
+    async def _emit(self, callback: StatusCallback, stage: str, message: str):
+        if callback:
+            await callback(stage, message)
+
+    async def run(self, prompt: str, status_callback: StatusCallback = None) -> dict:
         tools_text = format_tools_for_prompt()
         system_prompt = build_react_system(tools_text)
 
@@ -33,6 +39,8 @@ class ReactResearchAgent:
         steps_taken: int = 0
         is_ambiguous: bool = False
         resolved_meaning: Optional[str] = None
+
+        await self._emit(status_callback, "thinking", "Starting deep reasoning...")
 
         user_prompt = build_react_prompt(prompt, tools_text)
         conversation_history.append(f"User: {user_prompt}")
@@ -50,6 +58,7 @@ class ReactResearchAgent:
             parsed = parse_react_response(response.text)
             logger.info("ReAct step %s — Thought: %s", steps_taken + 1, parsed["thought"][:100])
             logger.info("ReAct step %s — Action: %s", steps_taken + 1, parsed["action"])
+            await self._emit(status_callback, "react_step", f"Step {steps_taken + 1}: {parsed['thought'][:150]}")
 
             conversation_history.append(response.text)
 
@@ -57,6 +66,7 @@ class ReactResearchAgent:
 
             if action == "web_search":
                 query_text = parsed["action_input"].get("query", str(parsed["action_input"]))
+                await self._emit(status_callback, "searching", f"Searching: {query_text[:100]}")
                 results = await self.search_provider.search(query_text)
                 new_count = 0
                 for source in results:
@@ -71,6 +81,7 @@ class ReactResearchAgent:
                 conversation_history.append(format_observation("web_search", observation))
 
             elif action == "disambiguate":
+                await self._emit(status_callback, "disambiguating", "Resolving ambiguous term...")
                 term = parsed["action_input"].get("term", prompt)
                 candidates = parsed["action_input"].get("candidates", [])
                 if candidates:
@@ -94,6 +105,7 @@ class ReactResearchAgent:
                 conversation_history.append(format_observation("disambiguate", observation))
 
             elif action == "analyze_sources":
+                await self._emit(status_callback, "scoring", f"Analyzing {len(collected_sources)} sources...")
                 scored = []
                 for source in collected_sources:
                     authority = get_domain_authority_score(source.url)
@@ -120,6 +132,7 @@ class ReactResearchAgent:
                 conversation_history.append(format_observation("analyze_sources", observation))
 
             elif action == "synthesize":
+                await self._emit(status_callback, "synthesizing", "Writing final answer...")
                 sources_for_synthesis = collected_sources[:10]
                 synth_prompt = build_synthesis_prompt(prompt, sources_for_synthesis)
                 synth_response = await self.llm_provider.generate(
@@ -135,6 +148,7 @@ class ReactResearchAgent:
                 if not final_answer:
                     final_answer = parsed["action_input"].get("answer", "")
                 logger.info("ReAct finished after %s steps", steps_taken + 1)
+                await self._emit(status_callback, "done", f"Research complete in {steps_taken + 1} steps")
                 steps_taken += 1
                 break
 
@@ -148,6 +162,7 @@ class ReactResearchAgent:
             steps_taken += 1
 
         if not final_answer and collected_sources:
+            await self._emit(status_callback, "synthesizing", "Reached max steps, finalizing answer...")
             sources_for_synthesis = collected_sources[:10]
             synth_prompt = build_synthesis_prompt(prompt, sources_for_synthesis)
             synth_response = await self.llm_provider.generate(
