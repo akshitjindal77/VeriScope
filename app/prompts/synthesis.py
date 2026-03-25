@@ -9,7 +9,8 @@ Rules:
 - Reference sources by their number in square brackets like [1], [2], etc.
 - If sources disagree with each other, acknowledge the disagreement.
 - If the sources don't contain enough information to fully answer the question, say so honestly.
-- Keep the answer concise but thorough. Aim for 2-4 paragraphs.
+- Write a detailed and comprehensive answer. Aim for 4-6 paragraphs minimum. Each paragraph should be 10-12 sentences long. Cover the topic from multiple angles: definition, how it works, why it matters, real-world applications, and any important nuances or debates.
+- Do not summarize too aggressively. The user wants depth, not brevity. Explain concepts thoroughly as if writing for someone encountering this topic for the first time.
 - Do not repeat the question back. Start directly with the answer.
 - Write in a neutral, informative tone."""
 
