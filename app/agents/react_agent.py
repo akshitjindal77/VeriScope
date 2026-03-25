@@ -66,6 +66,11 @@ class ReactResearchAgent:
 
             if action == "web_search":
                 query_text = parsed["action_input"].get("query", str(parsed["action_input"]))
+                query_text = query_text.split('\n')[0].strip()
+                if len(query_text) > 150:
+                    query_text = query_text[:150]
+                if 'Observation' in query_text or 'Thought' in query_text:
+                    query_text = prompt
                 await self._emit(status_callback, "searching", f"Searching: {query_text[:100]}")
                 results = await self.search_provider.search(query_text)
                 new_count = 0
