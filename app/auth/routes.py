@@ -33,11 +33,16 @@ async def signup(request: SignupRequest, db: AsyncSession = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
+    # Try email first, fall back to username
     result = await db.execute(select(User).where(User.email == request.email))
     user = result.scalar_one_or_none()
 
+    if user is None:
+        result = await db.execute(select(User).where(User.username == request.email))
+        user = result.scalar_one_or_none()
+
     if user is None or not verify_password(request.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise HTTPException(status_code=401, detail="Invalid email/username or password")
 
     token = create_access_token({"sub": user.id})
     return TokenResponse(access_token=token)
