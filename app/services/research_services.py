@@ -37,7 +37,10 @@ react_agent = ReactResearchAgent(search_provider=provider, llm_provider=llm_prov
 
 
 def make_cache_key(prompt: str, mode: str) -> str:
+    import re
     normalized = prompt.strip().lower()
+    normalized = re.sub(r'[?.!,;:\s]+$', '', normalized)
+    normalized = re.sub(r'\s+', ' ', normalized)
     return hashlib.sha256(f"{normalized}:{mode}".encode()).hexdigest()
 
 
