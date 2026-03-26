@@ -39,7 +39,7 @@ export const authAPI = {
 export const researchAPI = {
   query: (prompt, mode = 'linear', sessionId = null) =>
     api.post('/research', { prompt, mode, session_id: sessionId }),
-  stream: (prompt, mode = 'linear', sessionId = null) => {
+  stream: (prompt, mode = 'linear', sessionId = null, signal = null) => {
     const token = localStorage.getItem('veriscope_token');
     return fetch(`${API_BASE}/research/stream`, {
       method: 'POST',
@@ -48,6 +48,7 @@ export const researchAPI = {
         'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({ prompt, mode, session_id: sessionId }),
+      signal,
     });
   },
 };
