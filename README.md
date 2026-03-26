@@ -425,6 +425,6 @@ VeriScope is conceptually grounded in:
 
 ## Author
 
-Akshit Jindal
-Bachelor of Computer Information Systems
+**Akshit Jindal**  
+Bachelor of Computer Information Systems  
 University of the Fraser Valley
