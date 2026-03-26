@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Menu, X, LogOut, Search, Trash2, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { researchAPI, sessionAPI } from '../services/api';
-import SearchBar from '../components/SearchBar';
+import RadiantPromptInput from '../components/RadiantPromptInput';
 import StreamingStatus from '../components/StreamingStatus';
 import AnswerCard from '../components/AnswerCard';
 
@@ -340,7 +340,11 @@ export default function DashboardPage() {
         }
       }
     } catch (err) {
-      if (err.name === 'AbortError') return; // user stopped — no error message
+      if (err.name === 'AbortError') {
+        setIsResearching(false);
+        setStreamingStages(prev => [...prev, { stage: 'cancelled', message: 'Research stopped by user', timestamp: Date.now() }]);
+        return;
+      }
       setIsResearching(false);
       setStreamingStages([]);
       setMessages((prev) => [...prev, { type: 'error', message: 'Research failed. Please try again.' }]);
@@ -397,7 +401,7 @@ export default function DashboardPage() {
           ) : messages.length === 0 && !isResearching ? (
             <EmptyState />
           ) : (
-            <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+            <div className="max-w-3xl mx-auto px-4 py-6 pb-32 space-y-4">
               {messages.map((msg, i) => {
                 if (msg.type === 'query') return <QueryBubble key={i} prompt={msg.prompt} mode={msg.mode} />;
                 if (msg.type === 'result') return <AnswerCard key={i} result={msg.data} />;
@@ -416,12 +420,18 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <SearchBar
-          onSubmit={(prompt, mode) => { setCurrentMode(mode); handleSubmit(prompt, mode); }}
-          onStop={handleStop}
-          isResearching={isResearching}
-          disabled={false}
-        />
+        {/* Sticky search bar */}
+        <div className="sticky bottom-0 p-4 pb-6 bg-gradient-to-t from-gray-950 via-gray-950/95 to-transparent pt-8">
+          <RadiantPromptInput
+            onSubmit={(prompt, mode) => { setCurrentMode(mode); handleSubmit(prompt, mode); }}
+            onStop={handleStop}
+            isResearching={isResearching}
+            mode={currentMode}
+            onModeToggle={() => setCurrentMode(prev => prev === 'linear' ? 'react' : 'linear')}
+            placeholder="What would you like to research?"
+            disabled={false}
+          />
+        </div>
       </div>
     </div>
   );
