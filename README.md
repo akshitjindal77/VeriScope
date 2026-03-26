@@ -1,177 +1,301 @@
 # VeriScope
 
-AI-powered backend research engine with modular search providers, structured citation generation, and a clear path toward LLM-driven synthesis and ReAct-based agentic reasoning.
+AI-powered research engine with LLM-driven synthesis, intelligent query disambiguation, source quality scoring, ReAct deep reasoning, real-time streaming, user authentication, and a modern React frontend.
 
 ## Overview
 
-VeriScope is a modular backend research engine designed to take a user query, search the web using pluggable providers, collect and analyze sources, extract knowledge, and produce a synthesized research response with citations.
+VeriScope is a full-stack research application that takes a user query, analyzes it with a local LLM, resolves ambiguity, searches the web using pluggable providers, scores sources by quality, synthesizes a coherent narrative answer with inline citations, and streams the entire process to the user in real-time.
 
-The system is architected with a clean separation between search providers, data models, agent logic, and API routing. The current implementation delivers a working end-to-end research pipeline, with an active roadmap toward LLM-powered synthesis, intelligent query understanding, source quality scoring, and ReAct-based reasoning.
+The system features two research modes: a fast linear pipeline (~3-5 minutes) and an optional ReAct deep reasoning mode (~8-15 minutes) where the LLM agent reasons step-by-step, searches multiple angles, and self-corrects. All results are persisted in a database with user accounts, session history, and intelligent caching.
 
-## Current Capabilities
+## Live Features
 
-- Pluggable search provider architecture with abstract interface
-- Brave Search API integration with structured JSON parsing and TTL caching
-- DuckDuckGo fallback provider with HTML parsing, URL canonicalization, and domain filtering
-- Environment-based provider switching (no code changes required)
-- Structured Pydantic models for sources, citations, research plans, and responses
-- End-to-end research pipeline: Query → Plan → Search → Analyze → Write → Cite → Respond
-- Source deduplication by URL across multiple search queries
-- Input validation with length and empty-check guards
-- RESTful API with health check and research endpoints
+- **LLM-powered narrative synthesis** via Ollama (Mistral 7B) with graceful fallback to rule-based logic
+- **LLM-powered query analysis** with intent classification, domain detection, and dynamic search query generation
+- **Ambiguity resolution** — detects multi-meaning terms (RAG, Python, Rust, Java, etc.) and resolves to the most likely meaning
+- **Source quality scoring** — tiered domain authority ranking + relevance scoring, with low-quality source filtering
+- **Calibrated confidence** — multi-factor scoring based on source quality, count, domain diversity, and ambiguity
+- **ReAct agent loop** — optional deep reasoning mode with iterative Thought → Action → Observation cycles
+- **Real-time streaming** — Server-Sent Events (SSE) endpoint streams pipeline progress as it happens
+- **User authentication** — signup, login, JWT tokens, protected API routes
+- **Session history** — research conversations persisted in SQLite, loadable from the sidebar
+- **Result caching** — repeated queries return instantly from cache with case and punctuation normalization
+- **Citation filtering** — only sources referenced in the answer appear in the response
+- **HTML cleanup** — strips tags and decodes entities from search snippets
+- **Post-processing** — removes LLM artifacts like trailing source lists and summary paragraphs
+- **Modern React frontend** — animated landing page, auth flow, dashboard with streaming status, citation cards
+- **Radiant gradient search bar** — rotating conic gradient border with mode-aware color states
+- **CardSwap feature showcase** — animated card cycling with GSAP-powered depth animations
+- **Pluggable provider architecture** — abstract interfaces for both search and LLM backends
+- **Brave Search API** integration with TTL caching and HTML snippet cleaning
+- **DuckDuckGo fallback** provider with URL canonicalization and domain filtering
 
-## Core Architecture
+## Architecture
 
 ```text
 VeriScope/
-├── app/
+├── app/                              # Python backend
 │   ├── api/
-│   │   └── routes.py            # FastAPI endpoint definitions
+│   │   ├── routes.py                 # REST API endpoints
+│   │   └── stream_routes.py          # SSE streaming endpoint
 │   ├── agents/
-│   │   └── research_agent.py    # Core research pipeline logic
+│   │   ├── research_agent.py         # Linear research pipeline
+│   │   ├── react_agent.py            # ReAct deep reasoning agent
+│   │   └── tools.py                  # ReAct tool definitions
+│   ├── auth/
+│   │   ├── routes.py                 # Signup, login, me endpoints
+│   │   ├── dependencies.py           # JWT authentication dependency
+│   │   ├── security.py               # Password hashing, token management
+│   │   └── schemas.py                # Auth request/response models
 │   ├── config/
-│   │   └── settings.py          # Environment-based configuration
+│   │   └── settings.py               # Environment-based configuration
+│   ├── database/
+│   │   ├── connection.py             # SQLAlchemy async engine setup
+│   │   └── models.py                 # User, Session, Query, Cache tables
 │   ├── models/
-│   │   └── research_models.py   # Pydantic schemas (Source, Citation, etc.)
+│   │   └── research_models.py        # Pydantic schemas (Source, Citation, LLMResponse, etc.)
+│   ├── prompts/
+│   │   ├── synthesis.py              # Prompt templates for narrative synthesis
+│   │   ├── query_analysis.py         # Prompt templates for query understanding
+│   │   ├── disambiguation.py         # Prompt templates for ambiguity resolution
+│   │   └── react_prompt.py           # Prompt templates for ReAct reasoning
 │   ├── providers/
-│   │   ├── search_provider.py   # Abstract SearchProvider interface
-│   │   ├── brave_search_provider.py   # Brave Search API provider
-│   │   ├── web_search_provider.py     # DuckDuckGo fallback provider
-│   │   └── mock_search_provider.py    # Mock provider for testing
-│   └── services/
-│       └── research_services.py # Provider wiring and agent orchestration
-├── main.py                      # FastAPI application entry point
-├── requirements.txt
-└── .env                         # Environment variables (not committed)
+│   │   ├── search_provider.py        # Abstract SearchProvider interface
+│   │   ├── llm_provider.py           # Abstract LLMProvider interface
+│   │   ├── brave_search_provider.py  # Brave Search API provider
+│   │   ├── web_search_provider.py    # DuckDuckGo fallback provider
+│   │   ├── ollama_provider.py        # Ollama local LLM provider
+│   │   ├── mock_search_provider.py   # Mock search provider for testing
+│   │   └── mock_llm_provider.py      # Mock LLM provider for testing
+│   ├── services/
+│   │   └── research_services.py      # Provider wiring, caching, orchestration
+│   ├── sessions/
+│   │   ├── routes.py                 # Session CRUD endpoints
+│   │   └── schemas.py                # Session request/response models
+│   └── utils/
+│       ├── json_parser.py            # Safe JSON extraction from LLM responses
+│       ├── react_parser.py           # ReAct action/thought parser
+│       └── source_scoring.py         # Domain authority and relevance scoring
+├── frontend/                          # React application
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── RadiantPromptInput.jsx # Gradient search bar with mode toggle
+│   │   │   ├── CardSwap.jsx           # Animated card showcase component
+│   │   │   ├── StreamingStatus.jsx    # Real-time pipeline progress display
+│   │   │   ├── AnswerCard.jsx         # Research result with citations
+│   │   │   ├── CitationCard.jsx       # Expandable source card
+│   │   │   └── ConfidenceMeter.jsx    # Animated confidence bar
+│   │   ├── pages/
+│   │   │   ├── LandingPage.jsx        # Animated landing with Truth Lens demo
+│   │   │   ├── LoginPage.jsx          # Authentication - login
+│   │   │   ├── SignupPage.jsx         # Authentication - signup
+│   │   │   └── DashboardPage.jsx      # Main research interface
+│   │   ├── services/
+│   │   │   └── api.js                 # API client with JWT interceptors
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx        # Global authentication state
+│   │   └── App.jsx                    # Root component with routing
+│   ├── package.json
+│   └── vite.config.js
+├── main.py                            # FastAPI application entry point
+├── requirements.txt                   # Python dependencies
+├── veriscope.db                       # SQLite database (auto-created, gitignored)
+└── .env                               # Environment variables (not committed)
 ```
-
-The architecture separates concerns so that search providers, agent logic, data models, and API routing can evolve independently.
 
 ## How the Pipeline Works
 
-1. **Query Planning**
-   - Accept a user query via the API.
-   - Generate sub-questions and search queries based on the prompt.
+### Linear Mode (Fast, ~3-5 minutes)
 
-2. **Web Search**
-   - Execute search queries through the active provider (Brave or DuckDuckGo).
-   - Collect and deduplicate results by URL.
+1. **Query Analysis** — LLM analyzes the query for intent, domain, and ambiguity. Generates tailored search queries instead of generic templates.
+2. **Disambiguation** — If the query is ambiguous (e.g., "What is Rust?"), a second LLM call resolves it to the most likely meaning based on context.
+3. **Web Search** — Executes LLM-generated search queries through the active provider (Brave or DuckDuckGo). Deduplicates by URL.
+4. **Source Scoring** — Each source is scored by domain authority (tiered ranking) and relevance (keyword overlap). Sources are sorted by quality.
+5. **Source Filtering** — Sources below the quality threshold are removed. Top 10 by quality are sent to synthesis.
+6. **LLM Synthesis** — Mistral writes a coherent 5-6 paragraph answer citing sources with [1], [2] references. Post-processing removes artifacts.
+7. **Citation Filtering** — Only sources the LLM actually referenced appear in the response.
+8. **Confidence Calibration** — Multi-factor score based on average source quality, source count (diminishing returns), domain diversity, and ambiguity penalty.
 
-3. **Source Analysis**
-   - Extract snippets from collected sources.
-   - Remove duplicate content across results.
+### ReAct Mode (Deep, ~8-15 minutes)
 
-4. **Response Generation**
-   - Assemble a structured answer from analyzed notes.
-   - Generate a confidence score based on source count and coverage.
+The LLM operates in a reasoning loop with access to tools:
 
-5. **Citation Attachment**
-   - Map each source to a citation with URL, title, and supporting evidence.
-   - Return a structured JSON response.
+```
+Thought: "The query asks about RAG, which is ambiguous..."
+Action:  disambiguate("RAG", ["AI technique", "piece of cloth", "project management"])
+Observation: Resolved to "Retrieval-Augmented Generation (AI)"
 
-```json
-{
-  "status": "success",
-  "prompt": "What is retrieval augmented generation?",
-  "answer": "Based on the collected research...",
-  "citations": [
-    {
-      "source_id": "a3f8c1b2e9",
-      "url": "https://example.com/rag-explained",
-      "title": "RAG Explained",
-      "quotes": "...",
-      "evidence": "...",
-      "confidence": 0.5
-    }
-  ],
-  "confidence": 0.75
-}
+Thought: "Let me search for specific information..."
+Action:  web_search("Retrieval-Augmented Generation explained")
+Observation: Found 8 results from AWS, IBM, NVIDIA...
+
+Thought: "Good sources but need more depth. Searching again..."
+Action:  web_search("RAG architecture pipeline components")
+Observation: Found 10 more results including arxiv papers...
+
+Thought: "Ready to synthesize from 15 high-quality sources."
+Action:  synthesize()
+Observation: Generated comprehensive answer with citations.
+
+Action:  finish()
 ```
 
-## Search Provider System
+The agent decides when to search again, disambiguate, analyze sources, or finalize — adapting its strategy per query.
 
-VeriScope uses an abstract `SearchProvider` interface that decouples agent logic from any specific search engine.
+## The Frontend
 
-- **BraveSearchProvider** — Primary provider. Uses the Brave Search API for structured JSON results. Supports API key authentication, configurable result count, and TTL-based caching.
-- **WebSearchProvider (DuckDuckGo)** — Fallback provider. Parses DuckDuckGo HTML results with URL canonicalization, tracking parameter removal, and domain allow/block filtering.
-- **MockSearchProvider** — Testing provider. Returns deterministic results for unit and integration tests.
+### Landing Page
+- **"See Through the Noise"** headline with gradient text animation
+- **Interactive claim checker** — auto-typing demo with scanning animation showing VeriScope's verification flow
+- **Truth Lens visualization** — three-column display showing Raw Input → Analysis → Verified Output with scan-line animation
+- **CardSwap feature showcase** — GSAP-animated cards cycling through VeriScope's capabilities
+- **Trust indicators** — Research Papers, News Sources, AI Models, Data Analysis
 
-The active provider is selected via the `WEB_SEARCH_PROVIDER` environment variable.
+### Dashboard
+- **Radiant search bar** — rotating conic gradient border that changes color per mode (blue for Fast, purple for Deep) and spins faster during research
+- **Real-time streaming** — SSE events display pipeline progress as it happens
+- **ReAct thought viewer** — shows agent reasoning steps in deep mode
+- **Answer cards** — formatted answers with inline citation badges, confidence meter, query type, disambiguation info
+- **Citation cards** — expandable source cards with domain, title, confidence badge (green/yellow/red)
+- **Session sidebar** — past conversations grouped by date, click to reload, delete, or create new
+- **Stop button** — cancel in-progress research with AbortController
 
 ## Technology Stack
 
-- **Backend:** Python 3.10+, FastAPI, Uvicorn
-- **Data Validation:** Pydantic v2, Pydantic Settings
-- **HTTP Client:** httpx (async)
-- **HTML Parsing:** BeautifulSoup4 (DuckDuckGo provider)
-- **Caching:** cachetools (TTLCache)
-- **Configuration:** python-dotenv, environment variables
-- **Testing:** Pytest
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | Python 3.10+, FastAPI, Uvicorn |
+| **LLM** | Ollama (local), Mistral 7B via OpenAI-compatible API |
+| **Search** | Brave Search API (primary), DuckDuckGo (fallback) |
+| **Database** | SQLite via SQLAlchemy (async), aiosqlite |
+| **Auth** | JWT (python-jose), bcrypt (passlib) |
+| **Streaming** | Server-Sent Events (SSE) via StreamingResponse |
+| **Frontend** | React 18, Vite, Tailwind CSS |
+| **Animations** | Framer Motion, GSAP |
+| **HTTP Client** | httpx (async), axios (frontend) |
+| **Data Validation** | Pydantic v2, Pydantic Settings |
+| **Caching** | SQLite (database cache) + cachetools (in-memory TTL) |
 
 ## Installation
 
-1. **Clone repository**
-   ```bash
-   git clone https://github.com/akshitjindal77/VeriScope.git
-   cd VeriScope
-   ```
+### Backend
 
-2. **Create virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate        # Linux/macOS
-   venv\Scripts\activate           # Windows
-   ```
+```bash
+git clone https://github.com/akshitjindal77/VeriScope.git
+cd VeriScope
 
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+python -m venv venv
+source venv/bin/activate        # Linux/macOS
+venv\Scripts\activate           # Windows
 
-4. **Configure environment variables** — create a `.env` file:
-   ```env
-   app_name=VeriScope
-   env=development
-   WEB_SEARCH_PROVIDER=brave
-   BRAVE_API_KEY=your_brave_api_key
-   WEB_SEARCH_MAX_RESULTS=8
-   ```
+pip install -r requirements.txt
+```
+
+### Ollama (Local LLM)
+
+```bash
+# Download from https://ollama.com and install
+ollama serve                     # Start the Ollama server (keep running)
+ollama pull mistral              # Download Mistral 7B (~4GB)
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+```
+
+### Configuration
+
+Create a `.env` file in the project root:
+
+```env
+app_name=VeriScope
+env=development
+
+# Search
+WEB_SEARCH_PROVIDER=brave
+BRAVE_API_KEY=your_brave_api_key
+WEB_SEARCH_MAX_RESULTS=8
+
+# LLM
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=mistral
+LLM_TEMPERATURE=0.3
+LLM_MAX_TOKENS=2048
+LLM_TIMEOUT_S=120
+
+# Auth
+JWT_SECRET_KEY=change-this-to-a-random-secret-in-production
+
+# Database
+DATABASE_URL=sqlite+aiosqlite:///./veriscope.db
+
+# ReAct
+REACT_MAX_STEPS=7
+```
 
 ## Running the Application
 
 ```bash
+# Terminal 1: Start Ollama
+ollama serve
+
+# Terminal 2: Start the backend
 uvicorn app.main:app --reload
+
+# Terminal 3: Start the frontend
+cd frontend && npm run dev
 ```
 
-## API Documentation
-
-Interactive docs available at: `http://127.0.0.1:8000/docs`
+- Backend API: `http://localhost:8000`
+- Frontend: `http://localhost:5173`
+- API docs: `http://localhost:8000/docs`
 
 ## API Endpoints
 
-| Method | Path        | Description                                      |
-|--------|-------------|--------------------------------------------------|
-| GET    | `/`         | Hello endpoint                                   |
-| GET    | `/health`   | Service health check with app name and env        |
-| POST   | `/research` | Submit a query and receive a research response    |
+### Auth
 
-### GET /health
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/auth/signup` | Create account |
+| POST | `/auth/login` | Get JWT token |
+| GET | `/auth/me` | Current user info |
 
-**Response:**
-```json
-{
-  "status": "ok",
-  "app_name": "VeriScope",
-  "env": "development"
-}
-```
+### Research (requires JWT)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/research` | Submit query, get full response |
+| POST | `/research/stream` | Submit query, receive SSE events |
+
+### Sessions (requires JWT)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/sessions` | List user's sessions |
+| POST | `/sessions` | Create new session |
+| GET | `/sessions/{id}` | Get session with queries |
+| DELETE | `/sessions/{id}` | Delete session |
+
+### System
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | Hello endpoint |
+| GET | `/health` | Health check with LLM status |
+| DELETE | `/cache` | Clear expired cache entries |
 
 ### POST /research
 
 **Request:**
 ```json
 {
-  "prompt": "What is retrieval augmented generation?"
+  "prompt": "What is RAG?",
+  "mode": "linear",
+  "session_id": null
 }
 ```
 
@@ -179,95 +303,116 @@ Interactive docs available at: `http://127.0.0.1:8000/docs`
 ```json
 {
   "status": "success",
-  "prompt": "What is retrieval augmented generation?",
-  "answer": "Based on the collected research, here is a structured explanation of 'What is retrieval augmented generation?': ...",
+  "prompt": "What is RAG?",
+  "answer": "Retrieval-Augmented Generation (RAG) is a technique that optimizes the output of large language models by referencing authoritative knowledge bases outside of their training data [1][2]...",
   "citations": [
     {
-      "source_id": "a3f8c1b2e9",
-      "url": "https://example.com/rag-explained",
-      "title": "RAG Explained",
-      "quotes": "...",
-      "evidence": "...",
-      "confidence": 0.5
+      "source_id": "28839f5dd7",
+      "url": "https://aws.amazon.com/what-is/retrieval-augmented-generation/",
+      "title": "What is RAG? - AWS",
+      "confidence": 0.84
     }
   ],
-  "confidence": 0.75
+  "confidence": 0.77,
+  "query_type": "factual",
+  "resolved_meaning": "Retrieval-Augmented Generation (AI)",
+  "react_steps": null,
+  "session_id": "e4dd1f77-3b9c-4961-82cf-7e71777fea14"
 }
+```
+
+### POST /research/stream
+
+Returns Server-Sent Events:
+
+```
+data: {"event": "status", "stage": "analyzing", "message": "Analyzing your query..."}
+data: {"event": "status", "stage": "searching", "message": "Searching 4 queries..."}
+data: {"event": "status", "stage": "scoring", "message": "Scoring 32 sources by quality..."}
+data: {"event": "status", "stage": "synthesizing", "message": "Writing answer from sources..."}
+data: {"event": "result", "data": {full research response}}
 ```
 
 ## Configuration Options
 
-| Variable                  | Default                                          | Description                          |
-|---------------------------|--------------------------------------------------|--------------------------------------|
-| `app_name`                | —                                                | Application name                     |
-| `env`                     | `development`                                    | Environment mode                     |
-| `WEB_SEARCH_PROVIDER`     | `brave`                                          | Active search provider               |
-| `BRAVE_API_KEY`           | —                                                | Brave Search API key                 |
-| `BRAVE_ENDPOINT`          | `https://api.search.brave.com/res/v1/web/search` | Brave API endpoint                   |
-| `WEB_SEARCH_MAX_RESULTS`  | `8`                                              | Max results per search query         |
-| `WEB_SEARCH_TIMEOUT_S`    | `10.0`                                           | Search request timeout (seconds)     |
-| `WEB_SEARCH_CACHE_TTL_S`  | `300`                                            | Cache time-to-live (seconds)         |
-| `WEB_SEARCH_BLOCK_DOMAINS`| `[]`                                             | Domains to exclude from results      |
-| `WEB_SEARCH_ALLOW_DOMAINS`| `null`                                           | If set, only allow these domains     |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `app_name` | — | Application name |
+| `env` | `development` | Environment mode |
+| `WEB_SEARCH_PROVIDER` | `brave` | Active search provider |
+| `BRAVE_API_KEY` | — | Brave Search API key |
+| `BRAVE_ENDPOINT` | `https://api.search.brave.com/res/v1/web/search` | Brave API endpoint |
+| `WEB_SEARCH_MAX_RESULTS` | `8` | Max results per search query |
+| `WEB_SEARCH_TIMEOUT_S` | `10.0` | Search request timeout (seconds) |
+| `WEB_SEARCH_CACHE_TTL_S` | `300` | In-memory cache TTL (seconds) |
+| `WEB_SEARCH_BLOCK_DOMAINS` | `[]` | Domains to exclude |
+| `WEB_SEARCH_ALLOW_DOMAINS` | `null` | If set, only allow these domains |
+| `LLM_PROVIDER` | `ollama` | Active LLM provider |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server address |
+| `OLLAMA_MODEL` | `mistral` | Model name |
+| `LLM_TEMPERATURE` | `0.3` | Generation randomness |
+| `LLM_MAX_TOKENS` | `2048` | Max response tokens |
+| `LLM_TIMEOUT_S` | `120.0` | LLM request timeout |
+| `JWT_SECRET_KEY` | — | Secret for JWT signing |
+| `JWT_EXPIRE_MINUTES` | `1440` | Token expiry (24 hours) |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./veriscope.db` | Database connection |
+| `REACT_MAX_STEPS` | `7` | Max ReAct reasoning steps |
+| `SOURCE_MIN_QUALITY` | `0.3` | Minimum source quality threshold |
 
 ## Design Principles
 
 - **Modularity over monolith** — every component has a clear interface and responsibility
 - **Structured data everywhere** — Pydantic models enforce validation at every stage
-- **Provider agnostic** — search backends are swappable without changing agent logic
-- **Evidence over hallucination** — responses are grounded in retrieved sources with citations
-- **Honest confidence** — confidence scores reflect actual evidence quality
+- **Provider agnostic** — both search and LLM backends are swappable without changing agent logic
+- **Evidence over hallucination** — synthesis prompt instructs the LLM to only use provided sources
+- **Graceful degradation** — if the LLM is unavailable, the pipeline falls back to rule-based logic
 - **Honest documentation** — capabilities and limitations reflect the actual implementation
+- **Code-level safety nets** — post-processing catches LLM formatting issues that prompt engineering alone can't fix
 
 ## Known Limitations
 
-The current implementation is a working pipeline with known areas for improvement:
-
-- **Query planning is static** — sub-questions and search queries follow a fixed template regardless of query type or intent
-- **No ambiguity resolution** — ambiguous terms (e.g., "RAG", "Python", "Java") are not disambiguated before search
-- **Snippet-based analysis** — the analysis step deduplicates snippets but does not extract key claims or assess source agreement
-- **Concatenation-based synthesis** — the response is assembled from joined snippets rather than LLM-synthesized narrative
-- **Source quality not scored** — all sources are treated equally regardless of domain authority or relevance
-- **Confidence is source-count-based** — the score does not factor in source quality, agreement, or ambiguity
-- **Citation confidence is static** — individual citation confidence is hardcoded at 0.5 rather than reflecting actual relevance
-- **No LLM integration yet** — the pipeline is entirely rule-based and template-driven
+- **Local model speed** — synthesis on consumer GPUs (e.g., RTX 3050) takes 2-5 minutes per query; faster with smaller models like phi3
+- **ReAct parsing reliability** — Mistral 7B sometimes hallucinates future conversation steps in its action output; the parser strips these but edge cases remain
+- **Confidence is approximate** — the multi-factor formula is better than source-count-based but still doesn't assess actual factual accuracy
+- **No embedding-based deduplication** — semantic similarity for source grouping is planned but not implemented
+- **Single-user optimized** — SQLite handles development well but would need PostgreSQL for concurrent production use
+- **No email verification** — signup doesn't verify email addresses
+- **Cache is prompt-exact** — "What is RAG" and "explain RAG to me" are cached separately even though they ask the same thing
 
 ## Roadmap
 
-The following features are planned, in implementation order:
+### Completed
 
-### Phase 1: Query Intelligence
-- [x] Query Analysis module with intent classification, domain detection, and ambiguity flagging
-- [x] Ambiguity Resolver for multi-meaning terms (RAG, Python, Java, Apple, etc.)
-- [x] Dynamic query expansion based on detected intent and domain
+- [x] Pluggable search provider architecture (Brave + DuckDuckGo + Mock)
+- [x] Pluggable LLM provider architecture (Ollama + Mock)
+- [x] LLM-powered query analysis with intent classification
+- [x] Ambiguity detection and resolution
+- [x] Dynamic query expansion
+- [x] Domain authority scoring (tiered ranking)
+- [x] Relevance scoring per source
+- [x] Low-quality source filtering
+- [x] LLM-powered narrative synthesis
+- [x] Inline citation mapping with filtering
+- [x] Calibrated confidence scoring
+- [x] ReAct agent loop with tool-based architecture
+- [x] Real-time SSE streaming
+- [x] User authentication (JWT)
+- [x] Session and query persistence (SQLite)
+- [x] Result caching with TTL
+- [x] React frontend with animated landing page
+- [x] Dashboard with streaming status and citation cards
+- [x] Post-processing cleanup for LLM output artifacts
 
-### Phase 2: LLM Integration
-- [x] Abstract LLMProvider interface mirroring the SearchProvider pattern
-- [x] Ollama provider for local inference (Mistral 7B or similar)
-- [x] Prompt template system for synthesis and query analysis
-- [x] JSON parsing utility for structured LLM output
-- [ ] Graceful fallback to rule-based logic when LLM is unavailable
+### Planned
 
-### Phase 3: Source Quality
-- [x] Domain authority scoring (tiered ranking of source domains)
-- [x] Relevance scoring per source against the resolved query
-- [x] Low-quality source filtering before synthesis
-
-### Phase 4: Intelligent Synthesis
-- [x] LLM-powered narrative synthesis replacing concatenation
-- [x] Claim extraction and cross-source agreement detection
-- [x] Inline citation mapping (claims linked to specific sources)
-- [x] Calibrated confidence scoring based on evidence quality and agreement
-
-### Phase 5: Deduplication and Clustering
-- [ ] Embedding-based semantic similarity for source grouping
-- [ ] Redundancy removal across overlapping sources
-
-### Phase 6: ReAct Agent Loop
-- [ ] Iterative Thought → Action → Observation reasoning loop
-- [ ] Tool-based architecture (web_search, resolve_ambiguity, filter_sources, synthesize)
-- [ ] Agent decides when to search again, disambiguate, or finalize
-- [ ] Session and conversation context support
+- [ ] Embedding-based semantic deduplication and source clustering
+- [ ] Semantic cache matching (similar queries hit cache, not just exact matches)
+- [ ] Email verification on signup
+- [ ] PostgreSQL support for production deployment
+- [ ] Unit and integration test suite
+- [ ] Deployment configuration (Docker, Railway, or Render)
+- [ ] Rate limiting on API endpoints
+- [ ] Response streaming for answer text (word-by-word appearance)
 
 ## Research Foundation
 
