@@ -285,6 +285,7 @@ class ResearchAgent:
         return {int(n) for n in re.findall(r"\[(\d+)\]", answer)}
 
     async def run(self, prompt: str, status_callback: StatusCallback = None) -> dict:
+        prompt = prompt.strip()
         await self._emit(status_callback, "analyzing", "Analyzing your query...")
         plan, analysis = await self.plan_step(prompt)
         await self._emit(status_callback, "planning", f"Generated {len(plan.search_queries)} search queries")
