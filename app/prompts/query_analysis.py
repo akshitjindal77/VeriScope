@@ -15,6 +15,7 @@ The JSON must have exactly these fields:
   * "Rust" — could mean the Rust programming language or rust/corrosion on metal
   * "Go" — could mean the Go programming language or the verb/board game
   * "Swift" — could mean the Swift programming language or the bird or Taylor Swift
+  * "Docker" — could mean the containerization platform or a dock worker
   Set to false ONLY if the term has one clear, dominant meaning with no realistic alternative interpretation.
 - candidate_meanings: if is_ambiguous is true, list 2-5 possible meanings as short descriptions. If is_ambiguous is false, return an empty list [].
 - search_queries: a list of 3-5 specific search queries that would find the best information for this question. Make them diverse — don't just rephrase the same thing. Include different angles and specific terms.
