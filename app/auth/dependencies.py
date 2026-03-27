@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +8,8 @@ from sqlalchemy import select
 from app.database.connection import get_db
 from app.auth.security import verify_token
 from app.database.models import User
+
+logger = logging.getLogger(__name__)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -26,5 +30,8 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="User not found")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account deactivated")
+
+    if not user.email_verified:
+        logger.warning("User %s has not verified their email", user.email)
 
     return user
