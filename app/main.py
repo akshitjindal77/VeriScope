@@ -5,9 +5,15 @@ from app.api.stream_routes import router as stream_router
 from app.auth.routes import router as auth_router
 from app.sessions.routes import router as session_router
 from app.database.connection import init_db
+from app.api.rate_limiter import limiter
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 import logging
 
 app = FastAPI()
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
