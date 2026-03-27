@@ -16,6 +16,8 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
     is_active = Column(Boolean, default=True)
+    email_verified = Column(Boolean, default=False)
+    verification_token = Column(String, nullable=True)
 
     sessions = relationship("ResearchSession", back_populates="user", cascade="all, delete-orphan")
 
@@ -59,5 +61,6 @@ class ResearchCache(Base):
     prompt_hash = Column(String, nullable=False, index=True)
     mode = Column(String, nullable=False)
     response_json = Column(Text, nullable=False)
+    prompt_embedding = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     expires_at = Column(DateTime, nullable=False)
