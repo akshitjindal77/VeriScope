@@ -4,7 +4,7 @@ import logging
 import time
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import StreamingResponse
@@ -13,6 +13,7 @@ from app.auth.dependencies import get_current_user
 from app.database.connection import get_db
 from app.database.models import User, ResearchSession, ResearchQuery
 from app.services.research_services import run_research, _make_serializable
+from app.api.rate_limiter import limiter
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -25,19 +26,21 @@ class StreamResearchRequest(BaseModel):
 
 
 @router.post("/research/stream")
+@limiter.limit("10/hour")
 async def stream_research(
-    request: StreamResearchRequest,
+    request: Request,
+    stream_request: StreamResearchRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if not request.prompt.strip():
+    if not stream_request.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt cannot be empty")
-    if len(request.prompt) > 2000:
+    if len(stream_request.prompt) > 2000:
         raise HTTPException(status_code=413, detail="Prompt too long")
 
     valid_modes = {"linear", "react"}
-    if request.mode not in valid_modes:
-        raise HTTPException(status_code=400, detail=f"Invalid mode '{request.mode}'")
+    if stream_request.mode not in valid_modes:
+        raise HTTPException(status_code=400, detail=f"Invalid mode '{stream_request.mode}'")
 
     async def event_generator():
         status_queue: asyncio.Queue = asyncio.Queue()
@@ -51,8 +54,8 @@ async def stream_research(
             try:
                 start_time = time.time()
                 result = await run_research(
-                    prompt=request.prompt,
-                    mode=request.mode,
+                    prompt=stream_request.prompt,
+                    mode=stream_request.mode,
                     db=db,
                     status_callback=status_callback,
                 )
@@ -75,11 +78,11 @@ async def stream_research(
                 elif result_holder["result"]:
                     result = result_holder["result"]
                     try:
-                        session_id = request.session_id
+                        session_id = stream_request.session_id
                         if not session_id:
                             new_session = ResearchSession(
                                 user_id=current_user.id,
-                                title=request.prompt[:50],
+                                title=stream_request.prompt[:50],
                             )
                             db.add(new_session)
                             await db.commit()
@@ -88,8 +91,8 @@ async def stream_research(
 
                         query_record = ResearchQuery(
                             session_id=session_id,
-                            prompt=request.prompt,
-                            mode=request.mode,
+                            prompt=stream_request.prompt,
+                            mode=stream_request.mode,
                             answer=result.get("answer", ""),
                             citations_json=json.dumps(_make_serializable(result.get("citations", [])), default=str),
                             confidence=result.get("confidence", 0.0),
