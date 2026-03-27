@@ -1,5 +1,5 @@
 import hashlib
-import json
+import json as json_module
 import logging
 from datetime import datetime, timedelta
 
@@ -14,6 +14,7 @@ from app.providers.ollama_provider import OllamaProvider
 from app.providers.mock_llm_provider import MockLLMProvider
 from app.config.settings import settings
 from app.database.models import ResearchCache
+from app.utils.embeddings import get_embedding, cosine_similarity
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,7 @@ def make_cache_key(prompt: str, mode: str) -> str:
 
 
 async def get_cached_result(prompt: str, mode: str, db: AsyncSession) -> dict | None:
+    # First: try exact match
     cache_key = make_cache_key(prompt, mode)
     result = await db.execute(
         select(ResearchCache).where(
@@ -55,8 +57,45 @@ async def get_cached_result(prompt: str, mode: str, db: AsyncSession) -> dict | 
     )
     cached = result.scalar_one_or_none()
     if cached:
-        logger.info("Cache HIT for prompt='%s' mode=%s", prompt[:50], mode)
-        return json.loads(cached.response_json)
+        logger.info("Cache exact HIT for prompt='%s' mode=%s", prompt[:50], mode)
+        return json_module.loads(cached.response_json)
+
+    # Second: try semantic match
+    try:
+        query_embedding = get_embedding(prompt.strip().lower())
+
+        result = await db.execute(
+            select(ResearchCache).where(
+                ResearchCache.mode == mode,
+                ResearchCache.expires_at > datetime.utcnow(),
+                ResearchCache.prompt_embedding.isnot(None),
+            )
+        )
+        candidates = result.scalars().all()
+
+        best_match = None
+        best_score = 0.0
+        SIMILARITY_THRESHOLD = 0.85
+
+        for candidate in candidates:
+            try:
+                cached_embedding = json_module.loads(candidate.prompt_embedding)
+                similarity = cosine_similarity(query_embedding, cached_embedding)
+                if similarity > best_score and similarity >= SIMILARITY_THRESHOLD:
+                    best_score = similarity
+                    best_match = candidate
+            except Exception:
+                continue
+
+        if best_match:
+            logger.info(
+                "Cache semantic HIT for prompt='%s' (similarity=%.3f with cached prompt)",
+                prompt[:50], best_score
+            )
+            return json_module.loads(best_match.response_json)
+    except Exception as e:
+        logger.warning("Semantic cache lookup failed: %s", e)
+
     logger.info("Cache MISS for prompt='%s' mode=%s", prompt[:50], mode)
     return None
 
@@ -77,10 +116,18 @@ def _make_serializable(obj):
 
 async def save_to_cache(prompt: str, mode: str, response: dict, db: AsyncSession, ttl_minutes: int = 60):
     cache_key = make_cache_key(prompt, mode)
+
+    try:
+        embedding = get_embedding(prompt.strip().lower())
+        embedding_json = json_module.dumps(embedding)
+    except Exception:
+        embedding_json = None
+
     cache_entry = ResearchCache(
         prompt_hash=cache_key,
         mode=mode,
-        response_json=json.dumps(_make_serializable(response), default=str),
+        response_json=json_module.dumps(_make_serializable(response), default=str),
+        prompt_embedding=embedding_json,
         expires_at=datetime.utcnow() + timedelta(minutes=ttl_minutes),
     )
     db.add(cache_entry)
