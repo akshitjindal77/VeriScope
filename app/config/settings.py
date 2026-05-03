@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///./veriscope.db"
 
     # ── Auth Settings ──
-    JWT_SECRET_KEY: str = "change-this-to-a-random-secret-in-production"
+    JWT_SECRET_KEY: str = ""
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 1440
 

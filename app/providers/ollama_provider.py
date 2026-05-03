@@ -30,8 +30,10 @@ class OllamaProvider(LLMProvider):
         payload = {
             "model": self.settings.OLLAMA_MODEL,
             "messages": messages,
-            "temperature": temperature if temperature is not None else self.settings.LLM_TEMPERATURE,
-            "max_tokens": max_tokens if max_tokens is not None else self.settings.LLM_MAX_TOKENS,
+            "options": {
+                "temperature": temperature if temperature is not None else self.settings.LLM_TEMPERATURE,
+                "num_predict": max_tokens if max_tokens is not None else self.settings.LLM_MAX_TOKENS,
+            },
         }
 
         try:

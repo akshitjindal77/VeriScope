@@ -179,9 +179,14 @@ class ResearchAgent:
 
         if not response.text.strip():
             logger.warning("LLM returned empty synthesis, falling back to concatenation")
-            intro = f"Based on the collected research, here is a structured explanation of ‘{prompt}’: "
-            body = " ".join(notes)
-            conclusion = " The information above is synthesized from the referenced sources."
+            intro = f"Based on the collected research, here is a structured explanation of ‘{prompt}’:\n\n"
+            parts = []
+            for i, source in enumerate(sources, start=1):
+                snippet = (source.snippet or "").strip()
+                if snippet:
+                    parts.append(f"{snippet} [{i}]")
+            body = " ".join(parts)
+            conclusion = "\n\nThe information above is synthesized from the referenced sources."
             return intro + body + conclusion
 
         logger.info("Synthesis used %s tokens", response.tokens_used)
