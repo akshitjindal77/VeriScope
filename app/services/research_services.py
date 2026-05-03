@@ -11,6 +11,7 @@ from app.agents.react_agent import ReactResearchAgent
 from app.providers.web_search_provider import WebSearchProvider
 from app.providers.brave_search_provider import BraveSearchProvider
 from app.providers.ollama_provider import OllamaProvider
+from app.providers.groq_provider import GroqProvider
 from app.providers.mock_llm_provider import MockLLMProvider
 from app.config.settings import settings
 from app.database.models import ResearchCache
@@ -26,6 +27,8 @@ def _build_provider():
 
 
 def _build_llm_provider():
+    if settings.LLM_PROVIDER.lower() == "groq":
+        return GroqProvider(settings)
     if settings.LLM_PROVIDER.lower() == "ollama":
         return OllamaProvider(settings)
     return MockLLMProvider()
