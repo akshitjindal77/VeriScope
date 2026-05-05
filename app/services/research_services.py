@@ -15,7 +15,6 @@ from app.providers.groq_provider import GroqProvider
 from app.providers.mock_llm_provider import MockLLMProvider
 from app.config.settings import settings
 from app.database.models import ResearchCache
-from app.utils.embeddings import get_embedding, cosine_similarity
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +64,7 @@ async def get_cached_result(prompt: str, mode: str, db: AsyncSession) -> dict | 
 
     # Second: try semantic match
     try:
+        from app.utils.embeddings import get_embedding, cosine_similarity
         query_embedding = get_embedding(prompt.strip().lower())
 
         result = await db.execute(
@@ -96,6 +96,8 @@ async def get_cached_result(prompt: str, mode: str, db: AsyncSession) -> dict | 
                 prompt[:50], best_score
             )
             return json_module.loads(best_match.response_json)
+    except (ImportError, ModuleNotFoundError):
+        logger.warning("sentence-transformers not available, skipping semantic cache")
     except Exception as e:
         logger.warning("Semantic cache lookup failed: %s", e)
 
@@ -121,9 +123,14 @@ async def save_to_cache(prompt: str, mode: str, response: dict, db: AsyncSession
     cache_key = make_cache_key(prompt, mode)
 
     try:
+        from app.utils.embeddings import get_embedding
         embedding = get_embedding(prompt.strip().lower())
         embedding_json = json_module.dumps(embedding)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
+        logger.warning("sentence-transformers not available, saving cache without embeddings")
+        embedding_json = None
+    except Exception as e:
+        logger.warning("Failed to generate embedding: %s", e)
         embedding_json = None
 
     cache_entry = ResearchCache(
