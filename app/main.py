@@ -29,10 +29,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router)
-app.include_router(stream_router)
-app.include_router(auth_router)
-app.include_router(session_router)
+app.include_router(router, prefix="/api")
+app.include_router(stream_router, prefix="/api")
+app.include_router(auth_router, prefix="/api")
+app.include_router(session_router, prefix="/api")
 logging.basicConfig(level=logging.INFO)
 
 @app.on_event("startup")
