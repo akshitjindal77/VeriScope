@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Menu, X, LogOut, Search, Trash2, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { researchAPI, sessionAPI } from '../services/api';
+import { researchAPI, sessionAPI, API_BASE } from '../services/api';
 import RadiantPromptInput from '../components/RadiantPromptInput';
 import StreamingStatus from '../components/StreamingStatus';
 import AnswerCard from '../components/AnswerCard';
@@ -286,7 +286,7 @@ export default function DashboardPage() {
 
     try {
       const token = localStorage.getItem('veriscope_token');
-      const response = await fetch('/api/research/stream', {
+      const response = await fetch(`${API_BASE}/research/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
