@@ -1,172 +1,70 @@
-<p align="center">
-  <h1 align="center">🔍 VeriScope</h1>
-  <p align="center">
-    <strong>AI-Powered Research Engine with Deep Reasoning</strong>
-  </p>
-  <p align="center">
-    Intelligent query analysis · Source quality scoring · LLM synthesis with citations · ReAct agent reasoning
-  </p>
-  <p align="center">
-    <a href="#live-features">Features</a> ·
-    <a href="#how-the-pipeline-works">How It Works</a> ·
-    <a href="#installation">Installation</a> ·
-    <a href="#api-endpoints">API Docs</a> ·
-    <a href="#roadmap">Roadmap</a>
-  </p>
-</p>
+﻿# VeriScope
 
----
+Research engine for evidence-based answers, source scoring, and step-by-step reasoning.
 
 ## What is VeriScope?
 
-VeriScope is a full-stack research application that transforms a simple question into a comprehensive, cited answer. It analyzes your query with a local LLM, resolves ambiguity, searches the web through pluggable providers, scores every source by domain authority and relevance, synthesizes a coherent narrative with inline citations, and streams the entire process to you in real-time.
+VeriScope turns a question into an evidence-backed answer. The backend analyzes intent, resolves ambiguous terms, searches the web with pluggable providers, ranks sources by authority and relevance, and writes a cited narrative with a modern LLM.
 
-**Two research modes:**
+The system supports two research modes: a faster linear pipeline and a deeper ReAct agent loop. It works with local inference via Ollama or cloud inference via Groq, and it keeps the frontend and backend configurable for both development and deployment.
+
+## Research modes
 
 | Mode | Speed | How it works |
 |------|-------|-------------|
-| ⚡ **Fast** | ~3–5 min | Linear pipeline — single-pass analysis, search, and synthesis |
-| 🧠 **Deep** | ~8–15 min | ReAct agent — reasons step-by-step, searches multiple angles, self-corrects |
+| Fast | 3–5 min | Single-pass analysis, disambiguation, web search, source scoring, synthesis |
+| Deep | 8–15 min | ReAct agent loop with thought/action/observation cycles and multiple searches |
 
-All results are persisted with user accounts, session history, semantic caching, and email verification.
+## Features
 
----
-
-## Live Features
-
-### 🧠 Intelligence Layer
+### Intelligence layer
 | Feature | Description |
 |---------|-------------|
-| **Query Analysis** | LLM classifies intent, detects domain, and generates targeted search queries |
-| **Ambiguity Resolution** | Detects multi-meaning terms (RAG, Python, Rust, Java) and resolves to the correct meaning |
-| **Source Quality Scoring** | Tiered domain authority (government → tech → blogs) combined with keyword relevance scoring |
-| **Confidence Calibration** | Multi-factor score based on source quality, count, diversity, and ambiguity |
-| **Post-Processing** | Code-level cleanup removes LLM artifacts (trailing source lists, summary paragraphs) |
+| Query analysis | Classifies intent, detects domain, and generates targeted search queries |
+| Ambiguity resolution | Finds and resolves multi-meaning terms before search starts |
+| Source scoring | Combines domain authority and relevance to rank results |
+| Confidence calibration | Scores answer confidence based on sources, diversity, and ambiguity |
+| Post-processing | Removes LLM artifacts and keeps citations aligned with the answer |
 
-### 🔍 Research Pipeline
+### Research pipeline
 | Feature | Description |
 |---------|-------------|
-| **LLM Synthesis** | Mistral 7B writes coherent 5–6 paragraph answers with inline [1][2] citations |
-| **ReAct Agent Loop** | Iterative Thought → Action → Observation cycles with tool access |
-| **Citation Filtering** | Only sources actually referenced in the answer appear in the response |
-| **Graceful Fallback** | Pipeline falls back to rule-based logic when the LLM is unavailable |
+| LLM synthesis | LLM writes coherent 5-6 paragraph answers with inline citations |
+| ReAct agent loop | Iterative reasoning with tool actions and observations in deep mode |
+| Citation filtering | Only sources actually referenced in the final answer are returned |
+| Graceful fallback | The pipeline can fall back to non-LLM logic when needed |
 
-### 🛡️ Backend Infrastructure
+### Backend infrastructure
 | Feature | Description |
 |---------|-------------|
-| **User Authentication** | Signup, login, JWT tokens with bcrypt password hashing |
-| **Email Verification** | Secure token-based verification via itsdangerous |
-| **Session History** | Research conversations persisted in SQLite, grouped by date |
-| **Result Caching** | Exact-match + semantic embedding cache (sentence-transformers) |
-| **Rate Limiting** | SlowAPI-powered per-IP rate limits (10/hr research, 5/hr signup, 20/hr login) |
-| **Real-Time Streaming** | Server-Sent Events stream pipeline progress as it happens |
+| User authentication | Signup, login, JWT tokens, bcrypt password hashing |
+| Email verification | Secure token-based verification with itsdangerous |
+| Session history | Research conversations persisted in SQLite and grouped by date |
+| Result caching | Exact-match caching, optional semantic caching with sentence-transformers |
+| Rate limiting | SlowAPI per-IP rate limits for research and auth endpoints |
+| Real-time streaming | SSE endpoint streams pipeline progress to the frontend |
 
-### 🎨 Frontend
+### Frontend
 | Feature | Description |
 |---------|-------------|
-| **Landing Page** | "See Through the Noise" — animated hero with interactive claim checker and Truth Lens visualization |
-| **Radiant Search Bar** | Rotating conic gradient border — blue (Fast), purple (Deep), accelerated glow during research |
-| **CardSwap Showcase** | GSAP-animated feature cards with elastic depth transitions |
-| **Streaming Status** | Live progress indicators with stage-by-stage checkmarks |
-| **ReAct Thought Viewer** | Displays agent reasoning steps in real-time during deep mode |
-| **Citation Cards** | Expandable source cards with confidence badges (green / yellow / red) |
-| **Session Sidebar** | Past conversations grouped by date — reload, delete, or start new |
-| **Stop Button** | Cancel in-progress research via AbortController |
+| Landing page | React landing page with direct routing to the dashboard |
+| Search input | Configurable prompt input with live mode selection |
+| Streaming status | Live progress updates for the research pipeline |
+| ReAct thought viewer | Shows reasoning steps during deep mode searches |
+| Citation cards | Expandable source cards with confidence indicators |
+| Session sidebar | Load, create, and delete past research sessions |
+| Stop button | Abort ongoing research with AbortController |
 
-### 🔌 Pluggable Architecture
+### Pluggable architecture
 | Feature | Description |
 |---------|-------------|
-| **Search Providers** | Brave Search API (primary) + DuckDuckGo HTML fallback + Mock for testing |
-| **LLM Providers** | Ollama / Mistral (primary) + Mock for testing — swap via environment variable |
+| Search providers | Brave Search API primary, DuckDuckGo fallback, Mock provider for tests |
+| LLM providers | Ollama (local), Groq (cloud), Mock (testing) |
+| Deployment config | API URL switching and CORS origins driven by environment variables |
 
----
+## How the pipeline works
 
-## Architecture
-
-```text
-VeriScope/
-├── app/                              # Python backend (FastAPI)
-│   ├── api/
-│   │   ├── routes.py                 # REST endpoints + rate limiting
-│   │   ├── stream_routes.py          # SSE streaming endpoint
-│   │   └── rate_limiter.py           # SlowAPI configuration
-│   ├── agents/
-│   │   ├── research_agent.py         # Linear research pipeline
-│   │   ├── react_agent.py            # ReAct deep reasoning agent
-│   │   └── tools.py                  # ReAct tool definitions
-│   ├── auth/
-│   │   ├── routes.py                 # Signup, login, verify, me
-│   │   ├── dependencies.py           # JWT authentication dependency
-│   │   ├── security.py               # Hashing, JWT, verification tokens
-│   │   └── schemas.py                # Auth request/response models
-│   ├── config/
-│   │   └── settings.py               # Environment-based configuration
-│   ├── database/
-│   │   ├── connection.py             # SQLAlchemy async engine + session
-│   │   └── models.py                 # User, Session, Query, Cache tables
-│   ├── models/
-│   │   └── research_models.py        # Pydantic schemas
-│   ├── prompts/
-│   │   ├── synthesis.py              # Narrative synthesis templates
-│   │   ├── query_analysis.py         # Query understanding templates
-│   │   ├── disambiguation.py         # Ambiguity resolution templates
-│   │   └── react_prompt.py           # ReAct reasoning templates
-│   ├── providers/
-│   │   ├── search_provider.py        # Abstract SearchProvider
-│   │   ├── llm_provider.py           # Abstract LLMProvider
-│   │   ├── brave_search_provider.py  # Brave Search API
-│   │   ├── web_search_provider.py    # DuckDuckGo fallback
-│   │   ├── ollama_provider.py        # Ollama local LLM
-│   │   ├── mock_search_provider.py   # Mock search (testing)
-│   │   └── mock_llm_provider.py      # Mock LLM (testing)
-│   ├── services/
-│   │   └── research_services.py      # Orchestration + caching
-│   ├── sessions/
-│   │   ├── routes.py                 # Session CRUD
-│   │   └── schemas.py                # Session models
-│   └── utils/
-│       ├── json_parser.py            # Safe JSON extraction
-│       ├── react_parser.py           # ReAct action parser
-│       ├── source_scoring.py         # Domain authority + relevance
-│       └── embeddings.py             # Sentence-transformer embeddings
-├── frontend/                          # React application
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── RadiantPromptInput.jsx # Gradient search bar
-│   │   │   ├── CardSwap.jsx           # Animated card showcase
-│   │   │   ├── StreamingStatus.jsx    # Pipeline progress
-│   │   │   ├── AnswerCard.jsx         # Result + citations
-│   │   │   ├── CitationCard.jsx       # Expandable source card
-│   │   │   └── ConfidenceMeter.jsx    # Confidence bar
-│   │   ├── pages/
-│   │   │   ├── LandingPage.jsx        # Landing page
-│   │   │   ├── LoginPage.jsx          # Login
-│   │   │   ├── SignupPage.jsx         # Signup
-│   │   │   └── DashboardPage.jsx      # Research dashboard
-│   │   ├── services/api.js            # API client + interceptors
-│   │   ├── context/AuthContext.jsx     # Auth state
-│   │   └── App.jsx                    # Root + routing
-│   ├── package.json
-│   └── vite.config.js
-├── tests/                             # Test suite (pytest)
-│   ├── test_api.py                    # API endpoint tests
-│   ├── test_auth.py                   # Authentication tests
-│   ├── test_cache.py                  # Cache normalization tests
-│   ├── test_json_parser.py            # JSON parser tests
-│   ├── test_research_agent.py         # Pipeline tests
-│   ├── test_source_scoring.py         # Scoring tests
-│   └── conftest.py                    # Shared fixtures
-├── main.py
-├── requirements.txt
-├── veriscope.db                       # Auto-created, gitignored
-└── .env                               # Not committed
-```
-
----
-
-## How the Pipeline Works
-
-### ⚡ Linear Mode
+### Linear mode
 
 ```
 User Query
@@ -182,8 +80,8 @@ User Query
   ▼
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
 │  Source Scoring  │────▶│  LLM Synthesis   │────▶│  Post-Process   │
-│  Authority +     │     │  Mistral writes  │     │  Clean artifacts│
-│  relevance rank  │     │  cited narrative  │     │  Filter cites   │
+│  Authority +     │     │  LLM writes      │     │  Clean artifacts│
+│  relevance rank  │     │  cited narrative │     │  Filter cites   │
 └─────────────────┘     └──────────────────┘     └────────┬────────┘
                                                           │
                                                           ▼
@@ -191,7 +89,7 @@ User Query
                                                    + Confidence
 ```
 
-### 🧠 ReAct Mode
+### ReAct mode
 
 ```
 Thought: "The query asks about RAG, which could be ambiguous..."
@@ -211,27 +109,89 @@ Action:  synthesize()
 Action:  finish()
 ```
 
----
-
 ## Technology Stack
 
 | Layer | Technology |
 |-------|-----------|
-| **Backend** | Python 3.10+, FastAPI, Uvicorn |
-| **LLM** | Ollama, Mistral 7B (OpenAI-compatible API) |
-| **Search** | Brave Search API, DuckDuckGo (fallback) |
-| **Database** | SQLite, SQLAlchemy (async), aiosqlite |
-| **Auth** | JWT (python-jose), bcrypt (passlib), itsdangerous |
-| **Embeddings** | sentence-transformers (all-MiniLM-L6-v2) |
-| **Rate Limiting** | SlowAPI |
-| **Streaming** | Server-Sent Events (StreamingResponse) |
-| **Frontend** | React 18, Vite, Tailwind CSS |
-| **Animations** | Framer Motion, GSAP |
-| **HTTP** | httpx (backend), axios (frontend) |
-| **Validation** | Pydantic v2 |
-| **Testing** | pytest, pytest-asyncio |
+| Backend | Python 3.10+, FastAPI, Uvicorn |
+| LLM | Ollama (local) |
+| LLM | Groq, Llama 3.3 70B (OpenAI-compatible API) |
+| Search | Brave Search API, DuckDuckGo fallback |
+| Database | SQLite, SQLAlchemy (async), aiosqlite |
+| Auth | JWT (python-jose), bcrypt (passlib), itsdangerous |
+| Embeddings | sentence-transformers (optional) |
+| Rate limiting | SlowAPI |
+| Streaming | Server-Sent Events (StreamingResponse) |
+| Frontend | React 18, Vite, Tailwind CSS |
+| Animations | Framer Motion, GSAP |
+| HTTP | httpx (backend), axios (frontend) |
+| Validation | Pydantic v2 |
+| Testing | pytest, pytest-asyncio |
 
----
+## Architecture
+
+```text
+VeriScope/
+├── app/
+│   ├── api/
+│   │   ├── routes.py
+│   │   ├── stream_routes.py
+│   │   └── rate_limiter.py
+│   ├── agents/
+│   │   ├── research_agent.py
+│   │   ├── react_agent.py
+│   │   └── tools.py
+│   ├── auth/
+│   │   ├── routes.py
+│   │   ├── dependencies.py
+│   │   ├── security.py
+│   │   └── schemas.py
+│   ├── config/
+│   │   └── settings.py
+│   ├── database/
+│   │   ├── connection.py
+│   │   └── models.py
+│   ├── models/
+│   │   └── research_models.py
+│   ├── prompts/
+│   │   ├── synthesis.py
+│   │   ├── query_analysis.py
+│   │   ├── disambiguation.py
+│   │   └── react_prompt.py
+│   ├── providers/
+│   │   ├── search_provider.py
+│   │   ├── llm_provider.py
+│   │   ├── brave_search_provider.py
+│   │   ├── web_search_provider.py
+│   │   ├── ollama_provider.py
+│   │   ├── groq_provider.py
+│   │   ├── mock_search_provider.py
+│   │   └── mock_llm_provider.py
+│   ├── services/
+│   │   └── research_services.py
+│   ├── sessions/
+│   │   ├── routes.py
+│   │   └── schemas.py
+│   └── utils/
+│       ├── json_parser.py
+│       ├── react_parser.py
+│       ├── source_scoring.py
+│       └── embeddings.py
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── context/
+│   │   ├── pages/
+│   │   ├── services/api.js
+│   │   └── App.jsx
+│   ├── package.json
+│   └── vite.config.js
+├── tests/
+├── main.py
+├── requirements.txt
+├── veriscope.db
+└── .env
+```
 
 ## Installation
 
@@ -243,15 +203,14 @@ cd VeriScope
 
 python -m venv venv
 source venv/bin/activate        # Linux/macOS
-venv\Scripts\activate           # Windows
+venv\Scripts\activate         # Windows
 
 pip install -r requirements.txt
 ```
 
-### 2. Ollama
+### 2. Ollama (optional for local inference)
 
 ```bash
-# Download from https://ollama.com
 ollama serve
 ollama pull mistral
 ```
@@ -265,7 +224,7 @@ npm install
 
 ### 4. Environment
 
-Create `.env` in project root:
+Create `.env` in the project root:
 
 ```env
 app_name=VeriScope
@@ -275,42 +234,71 @@ env=development
 WEB_SEARCH_PROVIDER=brave
 BRAVE_API_KEY=your_brave_api_key
 WEB_SEARCH_MAX_RESULTS=8
+WEB_SEARCH_TIMEOUT_S=10.0
+WEB_SEARCH_CACHE_TTL_S=300
+WEB_SEARCH_BLOCK_DOMAINS=[]
+WEB_SEARCH_ALLOW_DOMAINS=null
 
-# LLM
+# LLM provider: choose one
 LLM_PROVIDER=ollama
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=mistral
+# LLM_PROVIDER=groq
+# GROQ_API_KEY=your_groq_api_key
+# GROQ_MODEL=llama-3.3-70b-versatile
 LLM_TEMPERATURE=0.3
 LLM_MAX_TOKENS=2048
-LLM_TIMEOUT_S=120
+LLM_TIMEOUT_S=120.0
 
 # Auth
 JWT_SECRET_KEY=change-this-to-a-random-secret-in-production
+JWT_EXPIRE_MINUTES=1440
 
 # Database
 DATABASE_URL=sqlite+aiosqlite:///./veriscope.db
 
+# Deployment / CORS
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+
 # ReAct
 REACT_MAX_STEPS=7
+REACT_STEP_TIMEOUT_S=60.0
 ```
 
----
+For cloud deployment you do not need Ollama. A Groq API key is enough when `LLM_PROVIDER=groq`.
 
 ## Running
 
+### Local Development
+
+Terminal 1:
+
 ```bash
-ollama serve                          # Terminal 1
-uvicorn app.main:app --reload         # Terminal 2
-cd frontend && npm run dev            # Terminal 3
+ollama serve
 ```
 
-| Service | URL |
-|---------|-----|
-| Frontend | http://localhost:5173 |
-| Backend | http://localhost:8000 |
-| API Docs | http://localhost:8000/docs |
+Terminal 2:
 
----
+```bash
+uvicorn app.main:app --reload
+```
+
+Terminal 3:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Frontend defaults to `http://localhost:5173`. Backend defaults to `http://localhost:8000`.
+
+### Deployment
+
+The app is ready to deploy with a split frontend and backend setup. Host the Python backend on Render or another service that supports FastAPI, and host the React frontend on Vercel or a static frontend host.
+
+For a deployed frontend, set `VITE_API_URL` to the backend base URL and add that frontend URL to `ALLOWED_ORIGINS`. The backend CORS policy is controlled by `ALLOWED_ORIGINS`.
+
+Render free tier memory is usually not enough for the full stack. Use a paid Render plan or an alternative host for production.
 
 ## Tests
 
@@ -318,98 +306,45 @@ cd frontend && npm run dev            # Terminal 3
 pytest tests/ -v
 ```
 
-59+ tests covering scoring, parsing, caching, pipeline, auth, and API endpoints — all using mock providers.
-
----
+The test suite covers API behavior, authentication, cache handling, parsing, scoring, and research pipeline flow with mock providers.
 
 ## API Endpoints
+
+All routes are mounted under `/api`.
 
 ### Authentication
 
 | Method | Path | Rate Limit | Description |
 |--------|------|-----------|-------------|
-| `POST` | `/auth/signup` | 5/hr | Create account → JWT + verification URL |
-| `POST` | `/auth/login` | 20/hr | Authenticate → JWT |
-| `GET` | `/auth/me` | — | Current user info |
-| `GET` | `/auth/verify` | — | Verify email via token |
+| POST | `/api/auth/signup` | 5/hr | Create account and return JWT + verification token |
+| POST | `/api/auth/login` | 20/hr | Authenticate and return JWT |
+| GET | `/api/auth/me` | — | Return current user info |
+| GET | `/api/auth/verify` | — | Verify email token |
 
 ### Research (JWT required)
 
 | Method | Path | Rate Limit | Description |
 |--------|------|-----------|-------------|
-| `POST` | `/research` | 10/hr | Full response |
-| `POST` | `/research/stream` | 10/hr | SSE event stream |
+| POST | `/api/research` | 10/hr | Run full research pipeline and return answer |
+| POST | `/api/research/stream` | 10/hr | Stream pipeline progress over SSE |
 
 ### Sessions (JWT required)
 
 | Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/sessions` | List sessions |
-| `POST` | `/sessions` | Create session |
-| `GET` | `/sessions/{id}` | Load session + queries |
-| `DELETE` | `/sessions/{id}` | Delete session |
+|--------|-------------|-------------|
+| GET | `/api/sessions` | List sessions |
+| POST | `/api/sessions` | Create a new session |
+| GET | `/api/sessions/{id}` | Load a session and its queries |
+| DELETE | `/api/sessions/{id}` | Delete a session |
 
 ### System
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/health` | Health + LLM status + rate limits |
-| `DELETE` | `/cache` | Clear expired cache |
-
-<details>
-<summary><strong>Example: POST /research</strong></summary>
-
-**Request:**
-```json
-{
-  "prompt": "What is RAG?",
-  "mode": "linear",
-  "session_id": null
-}
-```
-
-**Response:**
-```json
-{
-  "status": "success",
-  "prompt": "What is RAG?",
-  "answer": "Retrieval-Augmented Generation (RAG) is a technique that optimizes LLM output by referencing external knowledge bases [1][2]...",
-  "citations": [
-    {
-      "source_id": "28839f5dd7",
-      "url": "https://aws.amazon.com/what-is/retrieval-augmented-generation/",
-      "title": "What is RAG? — AWS",
-      "confidence": 0.84
-    }
-  ],
-  "confidence": 0.77,
-  "query_type": "factual",
-  "resolved_meaning": "Retrieval-Augmented Generation (AI)",
-  "react_steps": null,
-  "session_id": "e4dd1f77-3b9c-4961-82cf-7e71777fea14"
-}
-```
-</details>
-
-<details>
-<summary><strong>Example: POST /research/stream</strong></summary>
-
-```
-data: {"event": "status", "stage": "analyzing", "message": "Analyzing your query..."}
-data: {"event": "status", "stage": "disambiguating", "message": "Resolving ambiguous term..."}
-data: {"event": "status", "stage": "searching", "message": "Searching 4 queries..."}
-data: {"event": "status", "stage": "scoring", "message": "Scoring 32 sources..."}
-data: {"event": "status", "stage": "synthesizing", "message": "Writing answer..."}
-data: {"event": "result", "data": { ...full response... }}
-```
-</details>
-
----
+| GET | `/api/health` | Health status, LLM availability, and rate limits |
+| DELETE | `/api/cache` | Clear expired cache entries |
 
 ## Configuration
-
-<details>
-<summary><strong>All environment variables</strong></summary>
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -423,95 +358,95 @@ data: {"event": "result", "data": { ...full response... }}
 | `WEB_SEARCH_BLOCK_DOMAINS` | `[]` | Blocked domains |
 | `WEB_SEARCH_ALLOW_DOMAINS` | `null` | Allowed domains |
 | `LLM_PROVIDER` | `ollama` | LLM provider |
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server |
-| `OLLAMA_MODEL` | `mistral` | Model name |
-| `LLM_TEMPERATURE` | `0.3` | Randomness |
-| `LLM_MAX_TOKENS` | `2048` | Max tokens |
-| `LLM_TIMEOUT_S` | `120.0` | LLM timeout |
-| `JWT_SECRET_KEY` | — | JWT secret |
-| `JWT_EXPIRE_MINUTES` | `1440` | Token expiry |
-| `DATABASE_URL` | `sqlite+aiosqlite:///./veriscope.db` | Database |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
+| `OLLAMA_MODEL` | `mistral` | Ollama model |
+| `GROQ_API_KEY` | — | Groq API key (required if `LLM_PROVIDER=groq`) |
+| `GROQ_MODEL` | `llama-3.3-70b-versatile` | Groq model |
+| `LLM_TEMPERATURE` | `0.3` | Model randomness |
+| `LLM_MAX_TOKENS` | `2048` | Max token limit |
+| `LLM_TIMEOUT_S` | `120.0` | LLM request timeout |
+| `JWT_SECRET_KEY` | — | JWT signing secret |
+| `JWT_EXPIRE_MINUTES` | `1440` | Token expiry in minutes |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./veriscope.db` | Database connection URL |
 | `REACT_MAX_STEPS` | `7` | Max ReAct steps |
-| `SOURCE_MIN_QUALITY` | `0.3` | Min source quality |
+| `REACT_STEP_TIMEOUT_S` | `60.0` | Max seconds per ReAct step |
+| `ALLOWED_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Allowed CORS origins |
 
-</details>
+## Deployment
 
----
+The codebase is deployment-ready. It supports a split frontend/backend workflow with environment-controlled API routing and CORS.
 
-## Design Principles
+- Backend: deploy the FastAPI app from `app.main` on Render or another Python host.
+- Frontend: build the React app and deploy it on Vercel, or any static host.
+- Set `VITE_API_URL` in the frontend deployment to the backend URL.
+- Set `ALLOWED_ORIGINS` in the backend deployment to include the frontend URL.
+- If you use Groq, local Ollama is not required.
 
-- **Modularity** — every component has a clear interface; providers, agents, and models evolve independently
-- **Provider Agnostic** — swap search engines or LLMs via environment variables
-- **Evidence-First** — LLM uses only provided sources; post-processing enforces citation integrity
-- **Graceful Degradation** — LLM down? Rule-based fallback. Cache miss? Full pipeline runs.
-- **Defense in Depth** — prompt engineering + code-level cleanup + Pydantic validation at every boundary
-- **Honest Documentation** — limitations documented alongside capabilities
+Render free tier usually does not provide enough memory for the full stack. For production use, choose a paid Render plan or a host with more memory.
 
----
+## Design principles
 
-## Known Limitations
+- Modularity: providers, agents, and schemas are separated so components can change independently.
+- Provider agnostic: search and LLM providers are selected with environment variables.
+- Evidence first: the system only returns sources that are actually referenced in the answer.
+- Graceful degradation: missing providers or unavailable models fall back to safe behavior.
+- Validation at every boundary: Pydantic schemas validate input and output across the pipeline.
+- Honest documentation: the README reflects current project state, missing pieces, and known tradeoffs.
+
+## Known limitations
 
 | Area | Details |
 |------|---------|
-| Speed | 2–5 min/query on RTX 3050. Faster with phi3 or cloud LLMs (Groq). |
-| ReAct Parsing | Mistral 7B occasionally hallucinates future steps. Parser strips them. |
-| Confidence | Improved multi-factor formula; still doesn't assess factual accuracy. |
-| Deduplication | String-exact only. Semantic source grouping planned. |
-| Concurrency | SQLite is single-user. PostgreSQL needed for production. |
-| Semantic Cache | 0.85 cosine threshold. Borderline queries may miss or false-positive. |
-
----
+| Speed | Local Ollama on an RTX 3050 is 2–5 min per query. Groq cloud inference is noticeably faster. |
+| Semantic cache | sentence-transformers and semantic caching are optional. If unavailable, the system falls back to exact-match cache. |
+| ReAct parsing | The deep agent may attempt future actions. The parser strips invalid steps. |
+| Confidence | Confidence is calibrated from source quality, count, diversity, and ambiguity, but it does not guarantee factual correctness. |
+| Deduplication | Duplicate sources are detected by exact string matching only; semantic grouping is not implemented yet. |
+| Hosting | Render free tier memory may not be sufficient for a production-grade backend. |
 
 ## Roadmap
 
-### ✅ Completed
+### Completed
 
-- [x] Pluggable search providers (Brave + DuckDuckGo + Mock)
-- [x] Pluggable LLM providers (Ollama + Mock)
-- [x] LLM-powered query analysis
-- [x] Ambiguity detection and resolution
-- [x] Dynamic query expansion
-- [x] Domain authority + relevance scoring
-- [x] Low-quality source filtering
-- [x] LLM narrative synthesis
-- [x] Citation mapping and filtering
-- [x] Calibrated confidence scoring
-- [x] ReAct agent loop
-- [x] Real-time SSE streaming
-- [x] JWT authentication + bcrypt
-- [x] Email verification
-- [x] Session persistence (SQLite)
-- [x] Exact + semantic caching
-- [x] Rate limiting (SlowAPI)
-- [x] Test suite (pytest)
-- [x] React frontend + landing page
-- [x] Dashboard + streaming UI
-- [x] Radiant gradient search bar
-- [x] Post-processing cleanup
+- Pluggable search providers (Brave, DuckDuckGo, Mock)
+- Pluggable LLM providers (Ollama, Groq, Mock)
+- LLM-powered query analysis
+- Ambiguity detection and resolution
+- Dynamic query expansion
+- Domain authority and relevance scoring
+- Low-quality source filtering
+- LLM narrative synthesis
+- Citation mapping and filtering
+- Calibrated confidence scoring
+- ReAct agent loop
+- Real-time SSE streaming
+- JWT authentication and bcrypt
+- Email verification
+- Session persistence with SQLite
+- Exact-match and optional semantic caching
+- Rate limiting with SlowAPI
+- Test suite with pytest
+- React frontend and dashboard
+- Streaming status UI and ReAct thought viewer
+- Post-processing cleanup
 
-### 🔜 Planned
+### Planned
 
-- [ ] Embedding-based source deduplication
-- [ ] PostgreSQL for production
-- [ ] Docker containerization
-- [ ] Cloud deployment (Render / Railway)
-- [ ] Groq API integration (cloud LLM)
-- [ ] Word-by-word response streaming
+- Embedding-based source deduplication
+- PostgreSQL for production deployments
+- Docker containerization
+- Cloud deployment (Render / Railway) — codebase is ready and tested with Render and Vercel
+- Word-by-word response streaming
 
----
+## Research foundation
 
-## Research Foundation
-
-| Paper / Concept | Relevance |
+| Paper / concept | Relevance |
 |----------------|-----------|
-| **ReAct** (Yao et al., 2023) | Foundation for VeriScope's deep reasoning mode |
-| **RAG** (Lewis et al., 2020) | Core retrieval-augmented generation pipeline |
-| **Tool-Augmented LLMs** | Agent tool access: search, disambiguate, synthesize |
-| **Structured Output Validation** | Pydantic schemas at every pipeline boundary |
+| ReAct (Yao et al., 2023) | Basis for the deep reasoning mode |
+| RAG (Lewis et al., 2020) | Foundation for retrieval-augmented generation |
+| Tool-augmented LLMs | Agent actions use search, disambiguation, and synthesis tools |
+| Structured output validation | Pydantic schemas validate data across the pipeline |
 
----
+## Author
 
-<p align="center">
-  <strong>Built by <a href="https://github.com/akshitjindal77">Akshit Jindal</a></strong><br>
-  Bachelor of Computer Information Systems · University of the Fraser Valley
-</p>
+Built by Akshit Jindal
