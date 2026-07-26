@@ -1,4 +1,4 @@
-﻿# VeriScope
+# VeriScope
 
 Research engine for evidence-based answers, source scoring, and step-by-step reasoning.
 
@@ -12,7 +12,7 @@ The system supports two research modes: a faster linear pipeline and a deeper Re
 
 A short walkthrough of VeriScope in action:
 
-<video src="main post.mp4" controls width="100%"></video>
+[<video src="main post.mp4" controls width="100%"></video>](https://github.com/user-attachments/assets/3c34db82-9f07-4fae-8ee6-2274e89f3111)
 
 ## Research modes
 
