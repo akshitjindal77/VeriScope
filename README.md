@@ -8,6 +8,12 @@ VeriScope turns a question into an evidence-backed answer. The backend analyzes 
 
 The system supports two research modes: a faster linear pipeline and a deeper ReAct agent loop. It works with local inference via Ollama or cloud inference via Groq, and it keeps the frontend and backend configurable for both development and deployment.
 
+## Demo
+
+A short walkthrough of VeriScope in action:
+
+<video src="main post.mp4" controls width="100%"></video>
+
 ## Research modes
 
 | Mode | Speed | How it works |
